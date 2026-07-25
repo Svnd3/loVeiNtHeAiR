@@ -229,6 +229,25 @@
   color: #6b8582;
 }
 
+.account-surprises__status {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.account-surprises__status--seen {
+  color: #2f7a5e;
+}
+
+.account-surprises__status--pending {
+  color: #a3543f;
+}
+
+.account-surprises__status--locked {
+  color: #6b8582;
+}
+
 .account-surprises__actions {
   display: flex;
   align-items: center;

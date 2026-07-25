@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
+import { sendWelcomeEmail } from '../lib/notifications'
 import './Login.css'
 
 function maskEmail(value: string) {
@@ -228,9 +229,12 @@ function Login() {
       })
       if (signUpError) {
         setError(signUpError.message)
-      } else if (!data.session) {
-        setInfo('Check your email to confirm your account, then sign in.')
-        setMode('signin')
+      } else {
+        if (data.user?.email) sendWelcomeEmail(data.user.email)
+        if (!data.session) {
+          setInfo('Check your email to confirm your account, then sign in.')
+          setMode('signin')
+        }
       }
     }
 
@@ -247,7 +251,9 @@ function Login() {
   }
 
   const confirmReset = async () => {
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim())
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
     if (resetError) {
       setError(resetError.message)
     } else {

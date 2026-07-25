@@ -98,25 +98,60 @@ function Terms() {
             they're included for personal, non-commercial use within your page only. If you upload
             your own audio file, you confirm you have the right to use it this way. If you're a
             rights holder and want something removed, contact us at{' '}
-            <a href="mailto:legal@loveintheair.app">legal@loveintheair.app</a> and we'll act on valid requests
+            <a href="mailto:loveinntheairr@gmail.com">loveinntheairr@gmail.com</a> and we'll act on valid requests
             promptly.
           </p>
 
-          <h3>7. Paid features</h3>
+          <h3>7. Paid features &amp; billing</h3>
           <p>
-            The Service is currently free to use. If we introduce paid plans or one-time purchases
-            in the future, pricing, billing, and refund terms will be shown to you before you pay
-            for anything, and will form part of these terms once you agree to them.
+            Building a page is free. Getting the link to send your Recipient requires a one-time
+            payment, chosen from three tiers — Basic (KSh 499), Super (KSh 599), and Premium (KSh
+            759) — each unlocking more of what she'll see (things like your own uploaded song, the
+            gift attachment, and a couple of extra touches at the top tier). The exact features
+            included in each tier are shown to you before you pay. Payments are processed by
+            Paystack; we never see or store your card or mobile money details ourselves.
+          </p>
+          <p>
+            Each payment unlocks one page for one Recipient. There's no subscription and nothing
+            renews or charges again automatically.
           </p>
 
-          <h3>8. Suspension &amp; termination</h3>
+          <h3>8. Refunds</h3>
+          <p>
+            Because payment unlocks something typically opened within minutes of you sending the
+            link, refunds work like this:
+          </p>
+          <ul>
+            <li>
+              If your payment succeeds but the Service fails to deliver a working page — for
+              example, the link never becomes accessible because of a fault on our end — email us
+              within 7 days and we'll fix it or refund you in full.
+            </li>
+            <li>
+              If you change your mind before sending the link to your Recipient, contact us within
+              24 hours of payment and we'll refund you, as long as the link hasn't been opened yet.
+            </li>
+            <li>
+              Once your Recipient has opened the link, we consider the surprise delivered, and it's
+              no longer eligible for a refund.
+            </li>
+          </ul>
+          <p>
+            To request a refund, email{' '}
+            <a href="mailto:loveinntheairr@gmail.com">loveinntheairr@gmail.com</a> with your
+            account email and the surprise's link. If you dispute a charge directly with Paystack
+            or your bank instead, that's handled by their own process — contacting us first is
+            usually faster.
+          </p>
+
+          <h3>9. Suspension &amp; termination</h3>
           <p>
             You can stop using the Service and ask us to delete your account at any time (see the
             Privacy Policy for how). We can suspend or terminate accounts that violate these terms,
             attempt to abuse or overload the Service, or use it for anything illegal.
           </p>
 
-          <h3>9. No warranty</h3>
+          <h3>10. No warranty</h3>
           <p>
             We built this to make a nice moment happen, not as mission-critical infrastructure. The
             Service is provided "as is" — we don't guarantee it will be uninterrupted, error-free,
@@ -124,7 +159,7 @@ function Terms() {
             display (they're sourced from third parties and may sometimes be wrong or out of sync).
           </p>
 
-          <h3>10. Limitation of liability</h3>
+          <h3>11. Limitation of liability</h3>
           <p>
             To the extent allowed by law, we're not liable for indirect, incidental, or
             consequential damages arising from your use of the Service — including a surprise not
@@ -133,29 +168,30 @@ function Terms() {
             most users, is nothing).
           </p>
 
-          <h3>11. You indemnify us</h3>
+          <h3>12. You indemnify us</h3>
           <p>
             If a claim arises because of content you uploaded (including a photo, name, or detail
             about your Recipient, or a song you uploaded), you agree to cover the reasonable costs
             and damages that come from that claim.
           </p>
 
-          <h3>12. Governing law</h3>
+          <h3>13. Governing law</h3>
           <p>
             These terms are governed by the laws of Kenya, without regard to conflict-of-law
             rules. Any dispute arising from these terms or your use of the Service is subject to
             the exclusive jurisdiction of the courts of Kenya.
           </p>
 
-          <h3>13. Changes to these terms</h3>
+          <h3>14. Changes to these terms</h3>
           <p>
             We may update these terms as the Service changes. If we make a material change, we'll
             update the effective date above and, where practical, let existing users know.
           </p>
 
-          <h3>14. Contact</h3>
+          <h3>15. Contact</h3>
           <p>
-            Questions about these terms: <a href="mailto:legal@loveintheair.app">legal@loveintheair.app</a>
+            Questions about these terms:{' '}
+            <a href="mailto:loveinntheairr@gmail.com">loveinntheairr@gmail.com</a>
           </p>
         </section>
 
@@ -210,7 +246,7 @@ function Terms() {
           <h3>6. How long we keep it</h3>
           <p>
             We keep your account and page data until you ask us to delete it. There's no self-serve
-            delete button yet — email <a href="mailto:legal@loveintheair.app">legal@loveintheair.app</a> from your
+            delete button yet — email <a href="mailto:loveinntheairr@gmail.com">loveinntheairr@gmail.com</a> from your
             account's email address and we'll delete your account, your page(s), and associated
             files.
           </p>
@@ -221,7 +257,7 @@ function Terms() {
           <h3>8. Your rights</h3>
           <p>
             You can ask us what data we hold about you, ask us to correct it, or ask us to delete
-            it, by emailing <a href="mailto:legal@loveintheair.app">legal@loveintheair.app</a>. If
+            it, by emailing <a href="mailto:loveinntheairr@gmail.com">loveinntheairr@gmail.com</a>. If
             you're in Kenya, you have rights under the Data Protection Act, 2019 — including the
             right to access, correct, object to processing of, and request deletion of your
             personal data, and the right to lodge a complaint with the Office of the Data
@@ -244,7 +280,7 @@ function Terms() {
 
           <h3>11. Contact</h3>
           <p>
-            Privacy questions: <a href="mailto:legal@loveintheair.app">legal@loveintheair.app</a>
+            Privacy questions: <a href="mailto:loveinntheairr@gmail.com">loveinntheairr@gmail.com</a>
           </p>
         </section>
       </div>

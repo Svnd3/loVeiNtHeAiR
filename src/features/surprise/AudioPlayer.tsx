@@ -15,9 +15,16 @@ function initialSrc(song?: SongChoice) {
 function AudioPlayer({
   song,
   onTimeUpdate,
+  active = true,
 }: {
   song?: SongChoice
   onTimeUpdate?: (currentTime: number, duration: number) => void
+  // Lets a caller mount this (and its underlying <audio>) well before playback
+  // should start, so the file is already buffering in the background -- set
+  // false until the moment it should actually start playing. The <audio> tag
+  // always renders regardless (see the bottom of this component) so loading
+  // begins the instant a real `src` is set, not when `active` flips true.
+  active?: boolean
 }) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const onTimeUpdateRef = useRef(onTimeUpdate)
@@ -47,6 +54,9 @@ function AudioPlayer({
     }
   }, [song])
 
+  // Starts buffering the instant a real src is known, independent of `active`
+  // -- this is what lets the file already be loaded by the time playback is
+  // actually supposed to start, instead of only beginning the fetch then.
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -56,11 +66,19 @@ function AudioPlayer({
     }
     audio.addEventListener('loadedmetadata', applyStartAt)
     audio.load()
-    audio.play().catch(() => {})
     return () => {
       audio.removeEventListener('loadedmetadata', applyStartAt)
     }
   }, [src, song])
+
+  // Actually starts playback once `active` flips true -- deliberately a
+  // separate effect from the one above so becoming active never re-triggers
+  // audio.load() and throws away whatever had already buffered.
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio || !active) return
+    audio.play().catch(() => {})
+  }, [active, src])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -115,9 +133,9 @@ function AudioPlayer({
 
   return (
     <div className="audio-player" style={colorVars}>
-      <audio ref={audioRef} src={src} loop />
+      <audio ref={audioRef} src={src} loop preload="auto" />
 
-      {!expanded ? (
+      {active && (!expanded ? (
         <button
           type="button"
           className={`audio-player__disc ${playing ? 'audio-player__disc--spin' : ''}`}
@@ -161,7 +179,7 @@ function AudioPlayer({
             />
           </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }

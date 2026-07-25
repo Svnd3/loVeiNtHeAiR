@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Details from './pages/Details'
 import Account from './pages/Account'
+import ResetPassword from './pages/ResetPassword'
 import Terms from './pages/Terms'
 import Surprise from './pages/Surprise'
 import SharedSurprise from './pages/SharedSurprise'
@@ -39,6 +40,14 @@ function App() {
             element={
               <RequireAuth>
                 <Account />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <RequireAuth>
+                <ResetPassword />
               </RequireAuth>
             }
           />

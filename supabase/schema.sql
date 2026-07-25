@@ -20,6 +20,10 @@ create table if not exists surprises (
   him_photos text[] not null default '{}',
   memories text[] not null default '{}',
   places_photos text[] not null default '{}',
+  unlock_at timestamptz,
+  view_count integer not null default 0,
+  first_viewed_at timestamptz,
+  last_viewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -29,6 +33,16 @@ create table if not exists surprises (
 alter table surprises add column if not exists memories text[] not null default '{}';
 alter table surprises add column if not exists him_nickname text not null default '';
 alter table surprises add column if not exists places_photos text[] not null default '{}';
+-- unlock_at: leave a surprise's link "not yet unlocked" until this moment, even
+-- though the link itself already works (Paystack verified, get_surprise() finds
+-- the row) -- see get_surprise() below for how it blanks out the actual content
+-- until then. Null means "unlocked immediately", same as every surprise before
+-- this feature existed.
+alter table surprises add column if not exists unlock_at timestamptz;
+-- view tracking: lets the creator see whether she's actually opened it yet.
+alter table surprises add column if not exists view_count integer not null default 0;
+alter table surprises add column if not exists first_viewed_at timestamptz;
+alter table surprises add column if not exists last_viewed_at timestamptz;
 
 alter table surprises enable row level security;
 
@@ -104,6 +118,12 @@ create policy "owners manage their surprises"
 -- ones that don't exist. Caught this by testing with a made-up uuid and
 -- getting back a real surprise's data back -- do not rename this parameter
 -- back to surprise_id.
+-- unlock_at adds a "locked" state: her_name/her_nickname/him_name/him_nickname
+-- (who this is for/from) and tier/unlock_at/locked itself always come through so
+-- the page can show a "so-and-so has something for you, unlocks in..." screen,
+-- but every actual spoiler field (letter/gift/song/photos/memories) comes back
+-- blank until now() >= unlock_at. A null unlock_at behaves exactly like every
+-- surprise made before this feature existed -- unlocked the moment the link works.
 drop function if exists get_surprise(uuid);
 create or replace function get_surprise(p_surprise_id uuid)
 returns table (
@@ -118,15 +138,30 @@ returns table (
   him_photos text[],
   memories text[],
   places_photos text[],
-  tier text
+  tier text,
+  unlock_at timestamptz,
+  locked boolean
 )
 language sql
 security definer
 set search_path = public
 stable
 as $$
-  select s.her_name, s.her_nickname, s.him_name, s.him_nickname, s.letter, s.gift, s.song,
-         s.her_photos, s.him_photos, s.memories, s.places_photos, sp.tier
+  select
+    s.her_name,
+    s.her_nickname,
+    s.him_name,
+    s.him_nickname,
+    case when s.unlock_at is not null and now() < s.unlock_at then '' else s.letter end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::jsonb else s.gift end,
+    case when s.unlock_at is not null and now() < s.unlock_at then null else s.song end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.her_photos end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.him_photos end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.memories end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.places_photos end,
+    sp.tier,
+    s.unlock_at,
+    (s.unlock_at is not null and now() < s.unlock_at) as locked
   from surprises s
   join surprise_payments sp on sp.surprise_id = s.id
   where s.id = p_surprise_id
@@ -135,6 +170,48 @@ as $$
 $$;
 
 grant execute on function get_surprise(uuid) to anon, authenticated;
+
+-- Records that her link was actually opened (called once she clicks past the
+-- love-quiz intro, not on the bare page load, so a link preview/crawler bot
+-- doesn't count as "she saw it"). SECURITY DEFINER + narrow grant, same
+-- reasoning as get_surprise() -- anon can't UPDATE surprises directly (RLS
+-- above is owner-only), so this is the one deliberate, narrow hole in that:
+-- it can only ever bump counters on a row it's given the exact id for, never
+-- read or change anything else.
+--
+-- Now called from the record-surprise-view edge function (not directly from
+-- the client) so it can also email him the first time she opens it. Returns
+-- is_first_view straight out of the same UPDATE...RETURNING -- comparing
+-- against a fresh now() here is safe because every now() call within one
+-- statement returns the same transaction timestamp, so this can't race
+-- against a second near-simultaneous call the way a separate
+-- select-then-update would.
+-- Postgres won't let CREATE OR REPLACE change a function's return columns, so
+-- drop it first -- safe to re-run either way.
+drop function if exists record_surprise_view(uuid);
+create or replace function record_surprise_view(p_surprise_id uuid)
+returns table (
+  user_id uuid,
+  her_name text,
+  her_nickname text,
+  view_count integer,
+  is_first_view boolean
+)
+language sql
+security definer
+set search_path = public
+volatile
+as $$
+  update surprises
+  set view_count = view_count + 1,
+      first_viewed_at = coalesce(first_viewed_at, now()),
+      last_viewed_at = now()
+  where id = p_surprise_id
+  returning surprises.user_id, surprises.her_name, surprises.her_nickname,
+    surprises.view_count, (surprises.first_viewed_at = now()) as is_first_view;
+$$;
+
+grant execute on function record_surprise_view(uuid) to anon, authenticated;
 
 -- 4. Keep updated_at current on every edit.
 create or replace function set_updated_at()

@@ -11,6 +11,24 @@ type SurpriseSummary = {
   herName: string
   createdAt: string
   paid: boolean
+  viewCount: number
+  firstViewedAt: string | null
+  unlockAt: string | null
+}
+
+function statusLabel(surprise: SurpriseSummary) {
+  if (surprise.unlockAt && new Date(surprise.unlockAt).getTime() > Date.now()) {
+    return { text: '🔒 Locked until ' + new Date(surprise.unlockAt).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }), className: 'account-surprises__status--locked' }
+  }
+  if (surprise.firstViewedAt) {
+    return { text: `👀 Seen · ${surprise.viewCount} view${surprise.viewCount === 1 ? '' : 's'}`, className: 'account-surprises__status--seen' }
+  }
+  return { text: 'Not opened yet', className: 'account-surprises__status--pending' }
 }
 
 function Account() {
@@ -34,7 +52,7 @@ function Account() {
     Promise.all([
       supabase
         .from('surprises')
-        .select('id, her_name, created_at')
+        .select('id, her_name, created_at, view_count, first_viewed_at, unlock_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
       supabase.from('surprise_payments').select('surprise_id').eq('user_id', userId),
@@ -50,6 +68,9 @@ function Account() {
             herName: (row.her_name as string) || 'Untitled surprise',
             createdAt: row.created_at as string,
             paid: paidIds.has(row.id as string),
+            viewCount: (row.view_count as number) ?? 0,
+            firstViewedAt: (row.first_viewed_at as string | null) ?? null,
+            unlockAt: (row.unlock_at as string | null) ?? null,
           })),
         )
       }
@@ -173,6 +194,11 @@ function Account() {
                       day: 'numeric',
                     })}
                   </span>
+                  {surprise.paid && (
+                    <span className={`account-surprises__status ${statusLabel(surprise).className}`}>
+                      {statusLabel(surprise).text}
+                    </span>
+                  )}
                 </div>
 
                 {confirmingId === surprise.id ? (

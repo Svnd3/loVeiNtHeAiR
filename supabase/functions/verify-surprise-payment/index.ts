@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendEmail } from "../_shared/resend.ts";
 
 // Verifies a Paystack transaction server-side before a surprise's link ever
 // works for her — the client's own "payment successful" callback is never
@@ -81,7 +82,7 @@ serve(async (req) => {
     // someone else's surprise (or grief them by burning their reference).
     const { data: surprise, error: ownershipError } = await adminClient
       .from("surprises")
-      .select("id")
+      .select("id, her_name, her_nickname")
       .eq("id", surpriseId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -141,6 +142,24 @@ serve(async (req) => {
 
     if (insertError) {
       return jsonResponse({ error: insertError.message }, 409);
+    }
+
+    if (user.email) {
+      const herName = surprise.her_nickname || surprise.her_name || "her";
+      await sendEmail({
+        to: user.email,
+        subject: `Payment confirmed — ${tier} tier 🎉`,
+        html: `
+          <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
+            <h1 style="color:#241f27;">You're all set</h1>
+            <p style="color:#3d3540; line-height:1.6;">
+              Your payment for the <strong>${tier}</strong> tier (KSh ${expectedAmount}) on
+              ${herName}'s surprise is confirmed. Her link is live now.
+            </p>
+            <p style="color:#8a8290; font-size:13px;">Reference: ${reference}</p>
+          </div>
+        `,
+      });
     }
 
     return jsonResponse({ payment });

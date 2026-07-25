@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
 import TierPaywall from '../components/TierPaywall'
+import { sendSurpriseCreatedEmail } from '../lib/notifications'
 import './Details.css'
 
 // A photo is either one already uploaded (edit mode, loaded from the saved
@@ -103,6 +104,50 @@ const LETTER_TEMPLATES: { title: string; text: (name: string) => string }[] = [
   },
 ]
 
+function TierBadge({ tier }: { tier: 'basic' | 'super' | 'premium' }) {
+  const label = tier === 'basic' ? 'Basic' : tier === 'super' ? 'Super+' : 'Premium'
+  return <span className={`tier-badge tier-badge--${tier}`}>{label}</span>
+}
+
+function isoToDatetimeLocal(iso: string) {
+  const date = new Date(iso)
+  const offsetMs = date.getTimezoneOffset() * 60000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
+function ScheduleSection({
+  unlockAt,
+  onChange,
+}: {
+  unlockAt: string
+  onChange: (next: string) => void
+}) {
+  return (
+    <div className="schedule-section">
+      <h2 className="profile-section__title">
+        Schedule it (optional) 🔒 <TierBadge tier="basic" />
+      </h2>
+      <p className="profile-section__hint">
+        Send her the link whenever, but keep it locked until a moment you pick — her birthday
+        midnight, an anniversary, whenever you want this to actually open.
+      </p>
+      <label className="profile-field">
+        <span>Unlocks at</span>
+        <input
+          type="datetime-local"
+          value={unlockAt}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+      {unlockAt && (
+        <button type="button" className="letter-templates-btn" onClick={() => onChange('')}>
+          Unlock immediately instead
+        </button>
+      )}
+    </div>
+  )
+}
+
 const MIN_PLACE_PHOTOS = 1
 const MAX_PLACE_PHOTOS = 3
 
@@ -133,7 +178,9 @@ function PlacesSection({
 
   return (
     <div className="places-section">
-      <h2 className="profile-section__title">Places you've both been 📍</h2>
+      <h2 className="profile-section__title">
+        Places you've both been 📍 <TierBadge tier="basic" />
+      </h2>
       <p className="profile-section__hint">
         Add 1–3 photos from somewhere you've been together. She'll be asked if she remembers,
         then see it revealed.
@@ -197,7 +244,9 @@ function MemorySection({
 
   return (
     <div className="memory-section">
-      <h2 className="profile-section__title">Do you remember? 🎲</h2>
+      <h2 className="profile-section__title">
+        Do you remember? 🎲 <TierBadge tier="basic" />
+      </h2>
       <p className="profile-section__hint">
         A special moment, or something you think she's forgotten. Each one shows up mid-scroll as
         your photo — she swipes it to reveal what you wrote.
@@ -353,7 +402,9 @@ function GiftSection({
 
   return (
     <div className="gift-section">
-      <h2 className="profile-section__title">Plan her surprise</h2>
+      <h2 className="profile-section__title">
+        Plan her surprise <TierBadge tier="basic" />
+      </h2>
       <p className="profile-section__hint">
         What are you actually surprising her with? This is what she'll scratch to reveal at the
         very end.
@@ -447,7 +498,9 @@ function GiftSection({
       </div>
 
       <div className="gift-attachment">
-        <span className="gift-photo__label">Ticket, reservation, or document (optional)</span>
+        <span className="gift-photo__label">
+          Ticket, reservation, or document (optional) <TierBadge tier="premium" />
+        </span>
         <p className="gift-attachment__hint">
           Got an actual ticket, booking confirmation, or invite? Attach a photo of it — she'll be
           able to flip the card to see it.
@@ -551,7 +604,9 @@ function SongSection({
 
   return (
     <div className="song-section">
-      <h2 className="profile-section__title">Pick a song 🎵</h2>
+      <h2 className="profile-section__title">
+        Pick a song 🎵 <TierBadge tier="basic" />
+      </h2>
       <p className="profile-section__hint">
         What should be playing while she scrolls through your memories?
       </p>
@@ -620,7 +675,7 @@ function SongSection({
             className="letter-templates-btn"
             onClick={() => fileInputRef.current?.click()}
           >
-            Can't find one? Upload your own
+            Can't find one? Upload your own <TierBadge tier="super" />
           </button>
         )}
         <input ref={fileInputRef} type="file" accept="audio/*" hidden onChange={pickSong} />
@@ -685,7 +740,9 @@ function ProfileSection({
 
   return (
     <div className="profile-section">
-      <h2 className="profile-section__title">{title}</h2>
+      <h2 className="profile-section__title">
+        {title} <TierBadge tier="basic" />
+      </h2>
       <p className="profile-section__hint">{hint}</p>
 
       <label className="profile-field">
@@ -824,6 +881,7 @@ function Details() {
   const [gift, setGift] = useState<GiftDraft>(emptyGift)
   const [song, setSong] = useState<SongChoice | null>(null)
   const [songFile, setSongFile] = useState<File | null>(null)
+  const [unlockAt, setUnlockAt] = useState('')
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -870,6 +928,7 @@ function Details() {
         setMemories((data.memories as string[]) ?? [])
         setPlaces(((data.places_photos as string[]) ?? []).map((url) => ({ url })))
         setSong((data.song as SongChoice) ?? null)
+        setUnlockAt(data.unlock_at ? isoToDatetimeLocal(data.unlock_at as string) : '')
         const giftData = (data.gift ?? {}) as {
           type?: GiftType
           title?: string
@@ -897,7 +956,7 @@ function Details() {
     }
   }, [editId, session?.user.id])
 
-  const useTemplate = (template: (name: string) => string) => {
+  const applyTemplate = (template: (name: string) => string) => {
     setLetter(template(displayName(her)))
     setTemplatesOpen(false)
   }
@@ -1062,6 +1121,7 @@ function Details() {
         letter: letter.trim(),
         memories: memories.map((m) => m.trim()).filter(Boolean),
         song: song.type === 'library' ? song : null,
+        unlock_at: unlockAt ? new Date(unlockAt).toISOString() : null,
       }
 
       if (isEditing) {
@@ -1093,6 +1153,7 @@ function Details() {
           places_photos: [],
         })
         if (insertError) throw insertError
+        sendSurpriseCreatedEmail(id, session!.access_token)
       }
 
       setSurpriseId(id)
@@ -1265,7 +1326,9 @@ function Details() {
       <div className="letter-section">
         <div className="letter-section__header">
           <div>
-            <h2 className="profile-section__title">Write her something</h2>
+            <h2 className="profile-section__title">
+              Write her something <TierBadge tier="basic" />
+            </h2>
           </div>
           <button
             type="button"
@@ -1308,7 +1371,7 @@ function Details() {
                   type="button"
                   className="template-card"
                   key={template.title}
-                  onClick={() => useTemplate(template.text)}
+                  onClick={() => applyTemplate(template.text)}
                 >
                   <span className="template-card__title">{template.title}</span>
                   <span className="template-card__preview">
@@ -1330,6 +1393,8 @@ function Details() {
       />
 
       <GiftSection gift={gift} onChange={setGift} />
+
+      <ScheduleSection unlockAt={unlockAt} onChange={setUnlockAt} />
 
       {error && <p className="details__error">{error}</p>}
 
