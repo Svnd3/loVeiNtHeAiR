@@ -236,7 +236,7 @@ function CurveGallery({
     <div className="curve-gallery" ref={wrapperRef}>
       <div className="curve-gallery__sticky">
         <div className="curve-gallery__canvas" ref={containerRef} />
-        <p className="curve-gallery__hint">tap a photo ✨</p>
+        <p className="curve-gallery__hint">tap a photo</p>
       </div>
     </div>
   )

@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState, useEffect, type ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { compressImageToBlob } from '../lib/image'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
@@ -125,7 +124,7 @@ function ScheduleSection({
   return (
     <div className="schedule-section">
       <h2 className="profile-section__title">
-        Schedule it (optional) 🔒 <TierBadge tier="basic" />
+        Schedule it (optional) <TierBadge tier="basic" />
       </h2>
       <p className="profile-section__hint">
         Send her the link whenever, but keep it locked until a moment you pick — her birthday
@@ -179,7 +178,7 @@ function PlacesSection({
   return (
     <div className="places-section">
       <h2 className="profile-section__title">
-        Places you've both been 📍 <TierBadge tier="basic" />
+        Places you've both been <TierBadge tier="basic" />
       </h2>
       <p className="profile-section__hint">
         Add 1–3 photos from somewhere you've been together. She'll be asked if she remembers,
@@ -245,7 +244,7 @@ function MemorySection({
   return (
     <div className="memory-section">
       <h2 className="profile-section__title">
-        Do you remember? 🎲 <TierBadge tier="basic" />
+        Do you remember? <TierBadge tier="basic" />
       </h2>
       <p className="profile-section__hint">
         A special moment, or something you think she's forgotten. Each one shows up mid-scroll as
@@ -605,7 +604,7 @@ function SongSection({
   return (
     <div className="song-section">
       <h2 className="profile-section__title">
-        Pick a song 🎵 <TierBadge tier="basic" />
+        Pick a song <TierBadge tier="basic" />
       </h2>
       <p className="profile-section__hint">
         What should be playing while she scrolls through your memories?
@@ -639,7 +638,9 @@ function SongSection({
             >
               {previewingId === option.id ? '❚❚' : '▶'}
             </span>
-            <span className="song-card__title">{option.title}</span>
+            <span className="song-card__title">
+              {option.title} {option.tier === 'super' && <TierBadge tier="super" />}
+            </span>
             <span className="song-card__artist">{option.artist}</span>
           </button>
         ))}
@@ -675,7 +676,7 @@ function SongSection({
             className="letter-templates-btn"
             onClick={() => fileInputRef.current?.click()}
           >
-            Can't find one? Upload your own <TierBadge tier="super" />
+            Can't find one? Upload your own <TierBadge tier="premium" />
           </button>
         )}
         <input ref={fileInputRef} type="file" accept="audio/*" hidden onChange={pickSong} />
@@ -986,11 +987,15 @@ function Details() {
 
     try {
       const uploadImage = async (file: File, name: string) => {
-        const blob = await compressImageToBlob(file)
-        const path = `${userId}/${id}/${name}.jpg`
+        // Upload the file exactly as picked -- no canvas re-encode/resize --
+        // so what she sees is the original quality he uploaded, not a
+        // recompressed copy. Extension follows the real file, not a
+        // hardcoded .jpg, since it's no longer always re-encoded to JPEG.
+        const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+        const path = `${userId}/${id}/${name}.${extension}`
         const { error: uploadErr } = await supabase.storage
           .from('surprise-photos')
-          .upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+          .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: true })
         if (uploadErr) throw uploadErr
         const url = supabase.storage.from('surprise-photos').getPublicUrl(path).data.publicUrl
         bumpDone()

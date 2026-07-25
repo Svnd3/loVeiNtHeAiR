@@ -56,10 +56,10 @@ serve(async (req) => {
         const herName = row.her_nickname || row.her_name || "she";
         await sendEmail({
           to: ownerEmail,
-          subject: `${herName} just opened it 👀`,
+          subject: `${herName} just opened it`,
           html: `
             <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
-              <h1 style="color:#241f27;">She's seeing it right now 💗</h1>
+              <h1 style="color:#241f27;">She's seeing it right now</h1>
               <p style="color:#3d3540; line-height:1.6;">
                 ${herName} just opened the surprise you made. This is the only email you'll get
                 for this one — check your account page any time to see how many times she's

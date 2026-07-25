@@ -14,7 +14,7 @@ function RememberQuiz({
   if (!revealed) {
     return (
       <DodgeYesNo
-        title="Do you remember the first time we met? 💭"
+        title="Do you remember the first time we met?"
         hint="think back..."
         onYes={() => setRevealed(true)}
       />
@@ -24,7 +24,7 @@ function RememberQuiz({
   return (
     <section className="dodge-quiz remember-reveal">
       <p className="remember-reveal__label">
-        {photos.length > 0 ? 'remember this? 🤍' : 'you always do 🤍'}
+        {photos.length > 0 ? 'remember this?' : 'you always do'}
       </p>
       {photos.length > 0 && (
         <div className="remember-reveal__photos">

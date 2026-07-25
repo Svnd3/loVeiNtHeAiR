@@ -8,9 +8,20 @@ function Home() {
         Log In
       </Link>
 
-      <Link to="/surprise" className="home__surprise-box">
-        <p className="home__surprise-hint">your surprise is on its way… 🎀</p>
-      </Link>
+      <div className="home__surprise-wrap">
+        <Link to="/surprise" className="home__surprise-box">
+          <img
+            className="home__surprise-charm"
+            src="/bookandlove.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <p className="home__surprise-hint">Don't be a boring one, show her you care.</p>
+        </Link>
+        <Link to="/surprise" className="home__preview-link">
+          Click to see a preview
+        </Link>
+      </div>
     </main>
   )
 }

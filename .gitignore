@@ -17,6 +17,7 @@ dist-ssr
 
 understandings /
 login page/
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*

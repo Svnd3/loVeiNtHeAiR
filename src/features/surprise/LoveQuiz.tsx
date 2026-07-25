@@ -4,7 +4,7 @@ function LoveQuiz({ herName, onBelieve }: { herName?: string; onBelieve: () => v
   return (
     <DodgeYesNo
       greeting={herName ? `Hey, ${herName}` : undefined}
-      title="Do you believe in love? 💗"
+      title="Do you believe in love?"
       hint="be honest..."
       onYes={onBelieve}
     />

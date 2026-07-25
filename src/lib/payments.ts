@@ -23,7 +23,7 @@ export const TIERS: TierConfig[] = [
     features: [
       'Her & your profiles, photos, letter, memories and places',
       'The scratch-card gift reveal',
-      'A song from the library',
+      'Most songs from the library',
     ],
   },
   {
@@ -31,7 +31,7 @@ export const TIERS: TierConfig[] = [
     name: 'Super',
     amount: 599,
     tagline: 'Make it sound like the two of you',
-    features: ['Everything in Basic', 'Your own uploaded song plays instead', 'No loveintheair mark on her page'],
+    features: ['Everything in Basic', 'A few extra songs from the library', 'No loveintheair mark on her page'],
   },
   {
     id: 'premium',
@@ -40,6 +40,7 @@ export const TIERS: TierConfig[] = [
     tagline: 'Go all out',
     features: [
       'Everything in Super',
+      'Upload your own song instead of the library',
       'Attach the real ticket, reservation, or invite to the gift card',
       'An extra flourish on the final reveal',
     ],

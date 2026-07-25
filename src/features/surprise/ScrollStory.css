@@ -9,7 +9,7 @@
 }
 
 .scroll-story__line {
-  min-height: 38vh;
+  min-height: 38dvh;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -2,7 +2,7 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  min-height: 100svh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +14,7 @@
 .memory-card__hit {
   position: relative;
   width: min(420px, 100%);
-  height: min(560px, 78svh);
+  height: min(560px, 78dvh);
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
@@ -111,6 +111,6 @@
 
 @media (max-width: 480px) {
   .memory-card__hit {
-    height: 70svh;
+    height: 70dvh;
   }
 }

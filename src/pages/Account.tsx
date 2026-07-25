@@ -18,7 +18,7 @@ type SurpriseSummary = {
 
 function statusLabel(surprise: SurpriseSummary) {
   if (surprise.unlockAt && new Date(surprise.unlockAt).getTime() > Date.now()) {
-    return { text: '🔒 Locked until ' + new Date(surprise.unlockAt).toLocaleString(undefined, {
+    return { text: 'Locked until ' + new Date(surprise.unlockAt).toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
@@ -26,7 +26,7 @@ function statusLabel(surprise: SurpriseSummary) {
     }), className: 'account-surprises__status--locked' }
   }
   if (surprise.firstViewedAt) {
-    return { text: `👀 Seen · ${surprise.viewCount} view${surprise.viewCount === 1 ? '' : 's'}`, className: 'account-surprises__status--seen' }
+    return { text: `Seen · ${surprise.viewCount} view${surprise.viewCount === 1 ? '' : 's'}`, className: 'account-surprises__status--seen' }
   }
   return { text: 'Not opened yet', className: 'account-surprises__status--pending' }
 }

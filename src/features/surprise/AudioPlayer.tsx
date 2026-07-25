@@ -126,7 +126,7 @@ function AudioPlayer({
     ? `${librarySong.title} — ${librarySong.artist}`
     : song?.type === 'upload'
       ? song.name
-      : 'our song 🎵'
+      : 'our song'
 
   const color = PLAYER_COLORS[colorIndex]
   const colorVars = { '--player-bg': color.bg, '--player-fg': color.fg } as CSSProperties

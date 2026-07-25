@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendEmail } from "../_shared/resend.ts";
+import { sendEmail, sendAdminEmail } from "../_shared/resend.ts";
 
 // Verifies a Paystack transaction server-side before a surprise's link ever
 // works for her — the client's own "payment successful" callback is never
@@ -144,11 +144,12 @@ serve(async (req) => {
       return jsonResponse({ error: insertError.message }, 409);
     }
 
+    const herName = surprise.her_nickname || surprise.her_name || "her";
+
     if (user.email) {
-      const herName = surprise.her_nickname || surprise.her_name || "her";
       await sendEmail({
         to: user.email,
-        subject: `Payment confirmed — ${tier} tier 🎉`,
+        subject: `Payment confirmed — ${tier} tier`,
         html: `
           <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
             <h1 style="color:#241f27;">You're all set</h1>
@@ -161,6 +162,21 @@ serve(async (req) => {
         `,
       });
     }
+
+    await sendAdminEmail({
+      subject: `New payment — ${tier} (KSh ${expectedAmount})`,
+      html: `
+        <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
+          <h1 style="color:#241f27;">New payment received</h1>
+          <p style="color:#3d3540; line-height:1.6;">
+            <strong>${tier}</strong> tier — KSh ${expectedAmount}<br/>
+            Surprise for: ${herName}<br/>
+            Paid by: ${user.email ?? user.id}<br/>
+            Reference: ${reference}
+          </p>
+        </div>
+      `,
+    });
 
     return jsonResponse({ payment });
   } catch (error) {

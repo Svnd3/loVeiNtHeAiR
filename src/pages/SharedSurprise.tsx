@@ -6,7 +6,7 @@ import AudioPlayer from '../features/surprise/AudioPlayer'
 import LyricsBackdrop from '../features/surprise/LyricsBackdrop'
 import ScrollStory from '../features/surprise/ScrollStory'
 import SenderChip from '../features/surprise/SenderChip'
-import type { SongChoice } from '../features/surprise/songs'
+import { isSongAllowedForTier, type SongChoice } from '../features/surprise/songs'
 import type { SurpriseGift } from '../features/surprise/useProfile'
 import type { Tier } from '../lib/payments'
 import { recordSurpriseView } from '../lib/notifications'
@@ -146,11 +146,9 @@ function SharedSurprise() {
     )
   }
 
-  // Basic doesn't include a custom song upload — fall back to the app's
-  // default track instead of playing what he uploaded. Library picks always
-  // play regardless of tier.
-  const songForTier =
-    data.tier === 'basic' && data.song?.type === 'upload' ? undefined : data.song ?? undefined
+  // Uploading your own song is Premium-only, and a handful of library picks
+  // need Super or above — fall back to the app's default track otherwise.
+  const songForTier = isSongAllowedForTier(data.song, data.tier) ? data.song ?? undefined : undefined
 
   // The gift attachment (ticket/reservation/document) is a Premium-only
   // reveal — strip it for Basic/Super even if he uploaded one.

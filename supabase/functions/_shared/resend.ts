@@ -36,3 +36,18 @@ export async function sendEmail({
     console.error("Resend send threw", error);
   }
 }
+
+// Business-inbox copy for events the site owner should know about without
+// digging through the Supabase/Paystack dashboards (new signup, new payment).
+// Defaults to loveinntheairr@gmail.com but stays overridable via ADMIN_EMAIL
+// in case that inbox ever changes.
+export async function sendAdminEmail({
+  subject,
+  html,
+}: {
+  subject: string;
+  html: string;
+}) {
+  const adminEmail = Deno.env.get("ADMIN_EMAIL") ?? "loveinntheairr@gmail.com";
+  await sendEmail({ to: adminEmail, subject, html });
+}

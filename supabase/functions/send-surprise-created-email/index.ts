@@ -64,7 +64,7 @@ serve(async (req) => {
 
     await sendEmail({
       to: user.email,
-      subject: "Her surprise is ready 💌",
+      subject: "Her surprise is ready",
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
           <h1 style="color:#241f27;">It's ready for ${herName}</h1>
