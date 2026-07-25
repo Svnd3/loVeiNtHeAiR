@@ -1,0 +1,150 @@
+.scratch-reveal {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 40px 20px 80px;
+  background: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+.scratch-reveal__title {
+  font-size: clamp(1.6rem, 4.6vw, 2.2rem);
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.scratch-reveal__skip {
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.scratch-card {
+  position: relative;
+  width: min(360px, 88vw);
+  min-height: 460px;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -24px rgba(36, 25, 39, 0.5);
+  background: #fffdf9;
+  perspective: 1200px;
+}
+
+.scratch-card__flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scratch-card__flip--flipped {
+  transform: rotateY(180deg);
+}
+
+.scratch-card__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 22px;
+  backface-visibility: hidden;
+  background: #fffdf9;
+}
+
+.scratch-card__content--back {
+  transform: rotateY(180deg);
+  justify-content: center;
+  padding: 16px;
+}
+
+.scratch-card__attachment {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.scratch-card__flip-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+  height: 40px;
+  padding: 0 18px;
+  border: 1.5px solid var(--surprise-pink-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-h);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.scratch-card__flip-btn:hover {
+  background: var(--surprise-pink);
+}
+
+.scratch-card__flip-btn:active {
+  transform: scale(0.96);
+}
+
+.scratch-card__photo {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--surprise-pink);
+  margin-bottom: 6px;
+}
+
+.scratch-card__kicker {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #a3543f;
+}
+
+.scratch-card__title {
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.scratch-card__detail {
+  font-size: 0.9rem;
+  color: #2c5450;
+}
+
+.scratch-card__message {
+  margin-top: 10px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.scratch-card__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.scratch-card--revealed {
+  box-shadow: 0 24px 60px -24px rgba(36, 25, 39, 0.5), 0 0 0 3px var(--surprise-pink-border) inset;
+}

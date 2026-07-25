@@ -1,0 +1,52 @@
+.account-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 70;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--surprise-pink-border);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-decoration: none;
+  box-shadow: 0 8px 20px -10px rgba(36, 25, 39, 0.35);
+  transition: transform 0.15s ease, background-color 0.2s;
+}
+
+.account-button:hover {
+  background: var(--surprise-pink);
+}
+
+.account-button:active {
+  transform: scale(0.94);
+}
+
+.account-button__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.account-button__initial {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+@media (max-width: 480px) {
+  .account-button {
+    top: 14px;
+    right: 14px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .account-button__initial {
+    font-size: 14px;
+  }
+}

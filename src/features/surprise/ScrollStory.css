@@ -1,0 +1,25 @@
+.scroll-story {
+  width: 100%;
+  background: #fff;
+}
+
+.scroll-story__lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll-story__line {
+  min-height: 38vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px;
+  text-align: center;
+}
+
+.scroll-story__line p {
+  font-size: clamp(1.4rem, 5vw, 2.2rem);
+  font-weight: 600;
+  color: var(--text-h);
+  max-width: 640px;
+}

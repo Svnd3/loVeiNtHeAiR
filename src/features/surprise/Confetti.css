@@ -1,0 +1,52 @@
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 700px;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  z-index: 1;
+}
+
+.confetti-piece--slow {
+  animation: confetti-fall-slow 2.25s linear 1 forwards;
+}
+
+.confetti-piece--medium {
+  animation: confetti-fall-medium 1.75s linear 1 forwards;
+}
+
+.confetti-piece--fast {
+  animation: confetti-fall-fast 1.25s linear 1 forwards;
+}
+
+@keyframes confetti-fall-slow {
+  0% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
+  }
+  100% {
+    transform: translate3d(25px, 105vh, 0) rotateX(360deg) rotateY(180deg);
+  }
+}
+
+@keyframes confetti-fall-medium {
+  0% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
+  }
+  100% {
+    transform: translate3d(100px, 105vh, 0) rotateX(100deg) rotateY(360deg);
+  }
+}
+
+@keyframes confetti-fall-fast {
+  0% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
+  }
+  100% {
+    transform: translate3d(-50px, 105vh, 0) rotateX(10deg) rotateY(250deg);
+  }
+}

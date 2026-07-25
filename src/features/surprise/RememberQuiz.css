@@ -1,0 +1,70 @@
+.remember-reveal {
+  gap: 28px;
+}
+
+.remember-reveal__label {
+  font-family: 'Caveat', cursive;
+  font-size: clamp(2.2rem, 7vw, 3.4rem);
+  color: var(--text-h);
+  text-align: center;
+}
+
+.remember-reveal__photos {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0 -18px;
+}
+
+.remember-reveal__photo-btn {
+  width: min(38vw, 190px);
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 10px 26px;
+  box-shadow: 0 14px 30px -14px rgba(36, 25, 39, 0.5);
+  transform: rotate(calc((var(--i, 0) - 1) * 7deg));
+  margin: 0 -14px;
+  cursor: pointer;
+  animation: remember-reveal-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 0.12s);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.remember-reveal__photo-btn:hover,
+.remember-reveal__photo-btn:focus-visible {
+  transform: rotate(calc((var(--i, 0) - 1) * 7deg)) scale(1.05) translateY(-6px);
+  box-shadow: 0 20px 36px -16px rgba(36, 25, 39, 0.55);
+  z-index: 1;
+}
+
+.remember-reveal__photo-btn:active {
+  transform: rotate(calc((var(--i, 0) - 1) * 7deg)) scale(0.97);
+}
+
+.remember-reveal__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+@keyframes remember-reveal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) rotate(calc((var(--i, 0) - 1) * 7deg)) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(calc((var(--i, 0) - 1) * 7deg)) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .remember-reveal__photo-btn {
+    width: min(58vw, 220px);
+    margin: 0 -20px;
+  }
+}

@@ -1,0 +1,510 @@
+.login-page,
+.login-page * {
+  box-sizing: border-box;
+  text-transform: capitalize;
+  font-family: 'Poppins', sans-serif;
+}
+
+.login-page {
+  position: relative;
+  width: 100vw;
+  height: 100svh;
+  overflow: hidden;
+  background-image: linear-gradient(to top right, #f9a743, #f9db5f);
+}
+
+.login-page .ear {
+  position: absolute;
+  top: -110px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background-color: #243946;
+}
+.login-page .ear.ear--left {
+  left: -135px;
+}
+.login-page .ear.ear--right {
+  right: -135px;
+}
+
+.login-page__scroll {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  padding: 32px 16px 24px;
+}
+
+.login-page .face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 200px;
+  height: 150px;
+  margin: 16px auto 10px;
+  --rotate-head: 0deg;
+  transform: rotate(var(--rotate-head));
+  transition: transform 0.2s;
+  transform-origin: center 20px;
+  flex-shrink: 0;
+}
+.login-page .eye {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: #243946;
+}
+.login-page .eye.eye--left {
+  margin-right: 40px;
+}
+.login-page .eye.eye--right {
+  margin-left: 40px;
+}
+.login-page .eye .glow {
+  position: relative;
+  top: 3px;
+  right: -12px;
+  width: 12px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #fff;
+  transform: rotate(38deg);
+}
+.login-page .nose {
+  position: relative;
+  top: 30px;
+  transform: scale(1.1);
+}
+.login-page .nose .glow {
+  position: absolute;
+  top: 3px;
+  left: 32%;
+  width: 15px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #476375;
+}
+.login-page .mouth {
+  position: relative;
+  margin-top: 45px;
+}
+.login-page svg.smile {
+  position: absolute;
+  left: -28px;
+  top: -19px;
+  transform: scaleX(1.1);
+  stroke: #243946;
+}
+.login-page .mouth-hole {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 60px;
+  height: 15px;
+  border-radius: 50% / 100% 100% 0% 0;
+  transform: rotate(180deg);
+  background-color: #243946;
+  z-index: -1;
+}
+.login-page .tongue {
+  position: relative;
+  top: 5px;
+  width: 30px;
+  height: 20px;
+  background-color: #ffd7dd;
+  transform-origin: top;
+  transform: rotateX(60deg);
+}
+.login-page .tongue.breath {
+  animation: login-breath 0.3s infinite linear;
+}
+.login-page .tongue-top {
+  position: absolute;
+  bottom: -15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: #ffd7dd;
+}
+.login-page .line {
+  position: absolute;
+  top: 0;
+  width: 30px;
+  height: 5px;
+  background-color: #fcb7bf;
+}
+.login-page .median {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 25px;
+  border-radius: 5px;
+  background-color: #fcb7bf;
+}
+.login-page .hands {
+  position: relative;
+}
+.login-page .hands .hand {
+  position: absolute;
+  top: -3px;
+  display: flex;
+  transition: transform 0.5s ease-in-out;
+  z-index: 1;
+}
+.login-page .hands .hand--left {
+  left: -85px;
+}
+.login-page .hands .hand--left.hide {
+  transform: translate(2px, -155px) rotate(-160deg);
+}
+.login-page .hands .hand--left.peek {
+  transform: translate(0px, -120px) rotate(-160deg);
+}
+.login-page .hands .hand--right {
+  left: 30px;
+}
+.login-page .hands .hand--right.hide {
+  transform: translate(-6px, -155px) rotate(160deg);
+}
+.login-page .hands .hand--right.peek {
+  transform: translate(-4px, -120px) rotate(160deg);
+}
+.login-page .hands .finger {
+  position: relative;
+  z-index: 0;
+}
+.login-page .hands .finger .bone {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #243946;
+  border-bottom: none;
+  border-top: none;
+  background-color: #fac555;
+}
+.login-page .hands .finger .nail {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 20px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #243946;
+  background-color: #fac555;
+  z-index: -1;
+}
+.login-page .hands .finger:nth-child(1),
+.login-page .hands .finger:nth-child(3) {
+  left: 4px;
+  z-index: 1;
+}
+.login-page .hands .finger:nth-child(1) .bone,
+.login-page .hands .finger:nth-child(3) .bone {
+  height: 10px;
+}
+.login-page .hands .finger:nth-child(3) {
+  left: -4px;
+}
+.login-page .hands .finger:nth-child(2) {
+  top: -5px;
+  z-index: 2;
+}
+.login-page .hands .finger:nth-child(1) .nail,
+.login-page .hands .finger:nth-child(3) .nail {
+  top: 0px;
+}
+
+.login-page .tengah {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.login-page .login {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 100%);
+}
+
+.login-page .login__welcome {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #243946;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.login-page .google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  border: none;
+  background-color: #fff;
+  color: #3c4043;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.login-page .google-button:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.login-page .google-button:active {
+  transform: scale(0.97);
+}
+
+.login-page .login__divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 6px;
+  color: #6b5a3f;
+  font-size: 0.85rem;
+}
+.login-page .login__divider::before,
+.login-page .login__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(36, 57, 70, 0.25);
+}
+
+.login-page .login label {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #212529;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da;
+  appearance: none;
+  border-radius: 10px;
+  margin: 5px 1px;
+}
+.login-page .login label .field-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  width: 17px;
+  height: 17px;
+  color: #9a9a9a;
+  pointer-events: none;
+}
+.login-page .login input,
+.login-page .login .login-button {
+  height: 35px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+.login-page .login input {
+  width: 100%;
+  padding: 0 50px 0 38px;
+  margin: 0;
+  box-shadow: none;
+  outline: none;
+  text-transform: none;
+}
+.login-page .login input::placeholder {
+  color: #ccc;
+}
+.login-page .login input.password {
+  padding: 0 90px 0 38px;
+}
+.login-page .login .password-button {
+  position: absolute;
+  top: 15px;
+  right: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 27px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  background-color: #243946;
+  color: #fff;
+  cursor: pointer;
+}
+.login-page .login .password-button:active {
+  transform: scale(0.95);
+}
+
+.login-page .login label.login__terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 8px 2px;
+  margin: 6px 0 0;
+  text-align: left;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #4a3d2a;
+}
+.login-page .login__terms input {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 0;
+  accent-color: #243946;
+}
+.login-page .login__terms em {
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.login-page .login__forgot {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: #4a3d2a;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 2px 0;
+}
+
+.login-page .login__reset-confirm {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  color: #4a3d2a;
+  text-align: left;
+}
+.login-page .login__reset-confirm p {
+  margin: 0 0 8px;
+}
+.login-page .login__reset-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.login-page .login__reset-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: transparent;
+  color: #4a3d2a;
+}
+.login-page .login__reset-confirm-btn {
+  background: #243946 !important;
+  color: #fff !important;
+}
+
+.login-page .login__notice {
+  color: #2f5233;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  margin: 8px 0 0;
+  text-align: center;
+}
+
+.login-page .login__error {
+  color: #7a1f1f;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  margin: 8px 0 0;
+  text-align: center;
+}
+
+.login-page .login .login-button {
+  width: 100%;
+  margin: 14px 0 0;
+  align-items: center;
+  outline: none;
+  background-color: #243946;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.1s, background-color 0.2s;
+}
+.login-page .login .login-button:active {
+  transform: scale(0.95);
+}
+.login-page .login .login-button:hover {
+  background-color: #495e6b;
+}
+
+.login-page .login__cancel {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: #4a3d2a;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.login-page .footer {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 0.85rem;
+  max-width: 340px;
+}
+.login-page .footer p {
+  color: #4a3d2a;
+}
+
+@keyframes login-breath {
+  0%,
+  100% {
+    transform: rotateX(0deg);
+  }
+  50% {
+    transform: rotateX(60deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page .ear {
+    width: 150px;
+    height: 150px;
+    top: -85px;
+  }
+  .login-page .ear.ear--left {
+    left: -95px;
+  }
+  .login-page .ear.ear--right {
+    right: -95px;
+  }
+  .login-page__scroll {
+    padding: 24px 14px 20px;
+  }
+  .login-page .face {
+    width: 160px;
+    transform: scale(0.9) rotate(var(--rotate-head));
+    margin-top: 8px;
+  }
+}

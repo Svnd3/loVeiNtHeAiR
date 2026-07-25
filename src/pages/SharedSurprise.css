@@ -1,0 +1,17 @@
+.shared-surprise-status {
+  min-height: 100svh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: linear-gradient(160deg, var(--surprise-pink) 0%, #c7e3e1 100%);
+}
+
+.shared-surprise-status p {
+  max-width: 320px;
+  color: var(--text-h);
+  font-size: 1.05rem;
+  font-weight: 500;
+}

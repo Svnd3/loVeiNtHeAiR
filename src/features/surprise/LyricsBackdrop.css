@@ -1,0 +1,80 @@
+.lyrics-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 24px 9vh;
+}
+
+.lyrics-backdrop__stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(720px, 90vw);
+  animation: lyrics-stack-in 0.5s ease;
+}
+
+.lyrics-backdrop__line {
+  font-family: 'Achiko', 'Playfair Display', 'Caveat', serif;
+  text-align: center;
+  color: #eaf6f4;
+  text-wrap: balance;
+}
+
+.lyrics-backdrop__line--prev,
+.lyrics-backdrop__line--next {
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-weight: 400;
+  opacity: 0.35;
+  color: #1f3d3a;
+}
+
+.lyrics-backdrop__line--current {
+  font-size: clamp(1.5rem, 4.6vw, 2.5rem);
+  font-weight: 400;
+  color: #1f3d3a;
+  animation: lyrics-glow-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes lyrics-glow-pulse {
+  0%,
+  100% {
+    text-shadow:
+      0 0 8px rgba(255, 255, 255, 0.9),
+      0 0 18px rgba(123, 184, 179, 0.75),
+      0 0 34px rgba(251, 209, 232, 0.65),
+      0 0 52px rgba(123, 184, 179, 0.35);
+  }
+  50% {
+    text-shadow:
+      0 0 10px rgba(255, 255, 255, 0.95),
+      0 0 26px rgba(123, 184, 179, 0.9),
+      0 0 46px rgba(251, 209, 232, 0.8),
+      0 0 68px rgba(123, 184, 179, 0.45);
+  }
+}
+
+@keyframes lyrics-stack-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .lyrics-backdrop {
+    padding-bottom: 7vh;
+  }
+
+  .lyrics-backdrop__line--prev {
+    display: none;
+  }
+}
