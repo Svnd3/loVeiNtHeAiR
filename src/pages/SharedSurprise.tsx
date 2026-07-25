@@ -23,6 +23,9 @@ type FetchedSurprise = {
   song: SongChoice | null
   her_photos: string[]
   him_photos: string[]
+  her_photos_compressed: string[] | null
+  him_photos_compressed: string[] | null
+  places_photos_compressed: string[] | null
   memories: string[] | null
   places_photos: string[] | null
   tier: Tier
@@ -31,6 +34,15 @@ type FetchedSurprise = {
 }
 
 const POLL_INTERVAL_MS = 4000
+
+// Basic tier shows the smaller "compressed" sibling of each photo; Super/
+// Premium always get the full-quality original. Falls back to the original
+// per-item when a row was saved before the compressed column existed (or a
+// given upload has no compressed counterpart yet).
+function pickQuality(originals: string[], compressed: string[] | null, tier: Tier): string[] {
+  if (tier !== 'basic') return originals
+  return originals.map((url, i) => compressed?.[i] || url)
+}
 
 function formatCountdown(msRemaining: number) {
   if (msRemaining <= 0) return 'any moment now'
@@ -63,10 +75,19 @@ function SharedSurprise() {
   const [believed, setBelieved] = useState(false)
   const [audioTime, setAudioTime] = useState({ currentTime: 0, duration: 0 })
   const viewRecordedRef = useRef(false)
-  const photos = useMemo(
-    () => (data ? [...data.her_photos, ...data.him_photos] : []),
+  const herPhotos = useMemo(
+    () => (data ? pickQuality(data.her_photos, data.her_photos_compressed, data.tier) : []),
     [data],
   )
+  const himPhotos = useMemo(
+    () => (data ? pickQuality(data.him_photos, data.him_photos_compressed, data.tier) : []),
+    [data],
+  )
+  const placesPhotos = useMemo(
+    () => (data ? pickQuality(data.places_photos ?? [], data.places_photos_compressed, data.tier) : []),
+    [data],
+  )
+  const photos = useMemo(() => [...herPhotos, ...himPhotos], [herPhotos, himPhotos])
 
   // Counts as "she's seen it" once she's clicked past the love-quiz intro and
   // it's actually unlocked -- not on the bare page load (a link preview bot
@@ -151,9 +172,13 @@ function SharedSurprise() {
   const songForTier = isSongAllowedForTier(data.song, data.tier) ? data.song ?? undefined : undefined
 
   // The gift attachment (ticket/reservation/document) is a Premium-only
-  // reveal — strip it for Basic/Super even if he uploaded one.
-  const giftForTier =
-    data.tier === 'premium' ? data.gift : { ...data.gift, attachment: undefined }
+  // reveal — strip it for Basic/Super even if he uploaded one. The gift photo
+  // itself follows the same compressed-for-Basic rule as the gallery photos.
+  const giftForTier = {
+    ...data.gift,
+    photo: data.tier === 'basic' ? data.gift.photo_compressed || data.gift.photo : data.gift.photo,
+    attachment: data.tier === 'premium' ? data.gift.attachment : undefined,
+  }
 
   return (
     <div className="surprise">
@@ -180,11 +205,11 @@ function SharedSurprise() {
             herName={herName}
             himName={himName}
             photos={photos}
-            himPhotos={data.him_photos}
+            himPhotos={himPhotos}
             letter={data.letter}
             gift={giftForTier}
             memories={data.memories ?? []}
-            placesPhotos={data.places_photos ?? []}
+            placesPhotos={placesPhotos}
             premium={data.tier === 'premium'}
           />
           {data.tier === 'basic' && <p className="shared-surprise-watermark">made with loveintheair</p>}

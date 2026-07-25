@@ -2,21 +2,31 @@ import { useMemo, useRef, useState, useEffect, type ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
+import { compressImageToBlob } from '../lib/image'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
 import TierPaywall from '../components/TierPaywall'
 import { sendSurpriseCreatedEmail } from '../lib/notifications'
 import './Details.css'
 
 // A photo is either one already uploaded (edit mode, loaded from the saved
-// surprise) or one freshly picked from disk that still needs uploading.
-type PhotoItem = { url: string } | { file: File }
+// surprise -- carries both quality URLs so re-saving without touching this
+// photo doesn't lose the compressed sibling) or one freshly picked from disk
+// that still needs uploading (both versions get produced at upload time).
+type PhotoItem = { url: string; compressedUrl: string } | { file: File }
 
-function isExistingPhoto(item: PhotoItem): item is { url: string } {
+function isExistingPhoto(item: PhotoItem): item is { url: string; compressedUrl: string } {
   return 'url' in item
 }
 
 function photoPreviewUrl(item: PhotoItem) {
   return isExistingPhoto(item) ? item.url : URL.createObjectURL(item.file)
+}
+
+// Pairs up a *_photos array with its *_photos_compressed sibling by index --
+// falls back to the original URL for any row saved before compressed copies
+// existed (shorter/empty compressed array).
+function zipPhotos(originals: string[], compressed: string[]): PhotoItem[] {
+  return originals.map((url, i) => ({ url, compressedUrl: compressed[i] || url }))
 }
 
 function usePhotoPreviews(photos: PhotoItem[]) {
@@ -917,17 +927,28 @@ function Details() {
           country: data.her_country ?? '',
           name: data.her_name ?? '',
           nickname: data.her_nickname ?? '',
-          photos: ((data.her_photos as string[]) ?? []).map((url) => ({ url })),
+          photos: zipPhotos(
+            (data.her_photos as string[]) ?? [],
+            (data.her_photos_compressed as string[]) ?? [],
+          ),
         })
         setHim({
           country: data.him_country ?? '',
           name: data.him_name ?? '',
           nickname: data.him_nickname ?? '',
-          photos: ((data.him_photos as string[]) ?? []).map((url) => ({ url })),
+          photos: zipPhotos(
+            (data.him_photos as string[]) ?? [],
+            (data.him_photos_compressed as string[]) ?? [],
+          ),
         })
         setLetter(data.letter ?? '')
         setMemories((data.memories as string[]) ?? [])
-        setPlaces(((data.places_photos as string[]) ?? []).map((url) => ({ url })))
+        setPlaces(
+          zipPhotos(
+            (data.places_photos as string[]) ?? [],
+            (data.places_photos_compressed as string[]) ?? [],
+          ),
+        )
         setSong((data.song as SongChoice) ?? null)
         setUnlockAt(data.unlock_at ? isoToDatetimeLocal(data.unlock_at as string) : '')
         const giftData = (data.gift ?? {}) as {
@@ -937,6 +958,7 @@ function Details() {
           when?: string
           message?: string
           photo?: string
+          photo_compressed?: string
           attachment?: string
         }
         setGift({
@@ -945,8 +967,12 @@ function Details() {
           location: giftData.location ?? '',
           when: giftData.when ?? '',
           message: giftData.message ?? '',
-          photo: giftData.photo ? { url: giftData.photo } : null,
-          attachment: giftData.attachment ? { url: giftData.attachment } : null,
+          photo: giftData.photo
+            ? { url: giftData.photo, compressedUrl: giftData.photo_compressed || giftData.photo }
+            : null,
+          attachment: giftData.attachment
+            ? { url: giftData.attachment, compressedUrl: giftData.attachment }
+            : null,
         })
         setSurpriseId(editId)
         setLoadingExisting(false)
@@ -986,20 +1012,44 @@ function Details() {
     const bumpDone = () => setUploadDone((prev) => prev + 1)
 
     try {
-      const uploadImage = async (file: File, name: string) => {
-        // Upload the file exactly as picked -- no canvas re-encode/resize --
-        // so what she sees is the original quality he uploaded, not a
-        // recompressed copy. Extension follows the real file, not a
-        // hardcoded .jpg, since it's no longer always re-encoded to JPEG.
+      // Uploads the file exactly as picked (original quality, no resize) and,
+      // unless told not to, a compressed JPEG sibling alongside it -- Basic
+      // tier shows the compressed one, Super/Premium always show the
+      // original (see SharedSurprise.tsx). Extension on the original follows
+      // the real file rather than a hardcoded .jpg.
+      const uploadImage = async (
+        file: File,
+        name: string,
+        { withCompressed = true }: { withCompressed?: boolean } = {},
+      ) => {
         const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
         const path = `${userId}/${id}/${name}.${extension}`
-        const { error: uploadErr } = await supabase.storage
+
+        const uploadOriginal = supabase.storage
           .from('surprise-photos')
           .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: true })
-        if (uploadErr) throw uploadErr
-        const url = supabase.storage.from('surprise-photos').getPublicUrl(path).data.publicUrl
+          .then(({ error: uploadErr }) => {
+            if (uploadErr) throw uploadErr
+            return supabase.storage.from('surprise-photos').getPublicUrl(path).data.publicUrl
+          })
+
+        const uploadCompressed = withCompressed
+          ? compressImageToBlob(file).then((blob) => {
+              const compressedPath = `${userId}/${id}/${name}-compressed.jpg`
+              return supabase.storage
+                .from('surprise-photos')
+                .upload(compressedPath, blob, { contentType: 'image/jpeg', upsert: true })
+                .then(({ error: uploadErr }) => {
+                  if (uploadErr) throw uploadErr
+                  return supabase.storage.from('surprise-photos').getPublicUrl(compressedPath).data
+                    .publicUrl
+                })
+            })
+          : Promise.resolve('')
+
+        const [original, compressed] = await Promise.all([uploadOriginal, uploadCompressed])
         bumpDone()
-        return url
+        return { original, compressed: compressed || original }
       }
 
       // Existing (already-uploaded) photos are kept as-is; only freshly
@@ -1009,21 +1059,24 @@ function Details() {
           items.map((item) => {
             if (isExistingPhoto(item)) {
               bumpDone()
-              return Promise.resolve(item.url)
+              return Promise.resolve({ original: item.url, compressed: item.compressedUrl })
             }
             return uploadImage(item.file, `${prefix}-${crypto.randomUUID()}`)
           }),
         )
 
       const resolveGiftPhoto = () => {
-        if (!gift.photo) return Promise.resolve('')
+        if (!gift.photo) return Promise.resolve({ original: '', compressed: '' })
         if (isExistingPhoto(gift.photo)) {
           bumpDone()
-          return Promise.resolve(gift.photo.url)
+          return Promise.resolve({ original: gift.photo.url, compressed: gift.photo.compressedUrl })
         }
         return uploadImage(gift.photo.file, `gift-${crypto.randomUUID()}`)
       }
 
+      // The gift attachment only ever shows on Premium (see SharedSurprise.tsx),
+      // and Premium always gets full quality, so there's no point producing a
+      // compressed copy of it.
       const resolveGiftAttachment = () => {
         if (!gift.attachment) {
           bumpDone()
@@ -1033,16 +1086,26 @@ function Details() {
           bumpDone()
           return Promise.resolve(gift.attachment.url)
         }
-        return uploadImage(gift.attachment.file, `gift-attachment-${crypto.randomUUID()}`)
+        return uploadImage(gift.attachment.file, `gift-attachment-${crypto.randomUUID()}`, {
+          withCompressed: false,
+        }).then((result) => result.original)
       }
 
-      const [herPhotos, himPhotos, placesPhotos, giftPhoto, giftAttachment] = await Promise.all([
-        resolvePhotos(her.photos, 'her'),
-        resolvePhotos(him.photos, 'him'),
-        resolvePhotos(places, 'place'),
-        resolveGiftPhoto(),
-        resolveGiftAttachment(),
-      ])
+      const [herPhotosResult, himPhotosResult, placesPhotosResult, giftPhotoResult, giftAttachment] =
+        await Promise.all([
+          resolvePhotos(her.photos, 'her'),
+          resolvePhotos(him.photos, 'him'),
+          resolvePhotos(places, 'place'),
+          resolveGiftPhoto(),
+          resolveGiftAttachment(),
+        ])
+
+      const herPhotos = herPhotosResult.map((p) => p.original)
+      const herPhotosCompressed = herPhotosResult.map((p) => p.compressed)
+      const himPhotos = himPhotosResult.map((p) => p.original)
+      const himPhotosCompressed = himPhotosResult.map((p) => p.compressed)
+      const placesPhotos = placesPhotosResult.map((p) => p.original)
+      const placesPhotosCompressed = placesPhotosResult.map((p) => p.compressed)
 
       let songPayload: SongChoice = song!
       if (song?.type === 'upload' && songFile) {
@@ -1060,8 +1123,11 @@ function Details() {
         .from('surprises')
         .update({
           her_photos: herPhotos,
+          her_photos_compressed: herPhotosCompressed,
           him_photos: himPhotos,
+          him_photos_compressed: himPhotosCompressed,
           places_photos: placesPhotos,
+          places_photos_compressed: placesPhotosCompressed,
           song: songPayload,
           gift: {
             type: gift.type,
@@ -1069,7 +1135,8 @@ function Details() {
             location: gift.location.trim(),
             when: gift.when.trim(),
             message: gift.message.trim(),
-            photo: giftPhoto,
+            photo: giftPhotoResult.original,
+            photo_compressed: giftPhotoResult.compressed,
             attachment: giftAttachment,
           },
         })
@@ -1151,11 +1218,15 @@ function Details() {
             when: gift.when.trim(),
             message: gift.message.trim(),
             photo: '',
+            photo_compressed: '',
             attachment: '',
           },
           her_photos: [],
+          her_photos_compressed: [],
           him_photos: [],
+          him_photos_compressed: [],
           places_photos: [],
+          places_photos_compressed: [],
         })
         if (insertError) throw insertError
         sendSurpriseCreatedEmail(id, session!.access_token)

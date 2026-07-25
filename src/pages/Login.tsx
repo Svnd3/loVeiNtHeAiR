@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
-import { sendWelcomeEmail } from '../lib/notifications'
+import { sendWelcomeEmail, signupInProgress } from '../lib/notifications'
 import './Login.css'
 
 function maskEmail(value: string) {
@@ -223,10 +223,12 @@ function Login() {
       })
       if (signInError) setError(signInError.message)
     } else {
+      signupInProgress.current = true
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       })
+      signupInProgress.current = false
       if (signUpError) {
         setError(signUpError.message)
       } else {

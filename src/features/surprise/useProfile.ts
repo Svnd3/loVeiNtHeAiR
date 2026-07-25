@@ -12,6 +12,7 @@ type StoredGift = {
   when: string
   message: string
   photo: string
+  photo_compressed?: string
   attachment?: string
 }
 

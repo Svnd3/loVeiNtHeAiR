@@ -20,6 +20,14 @@ create table if not exists surprises (
   him_photos text[] not null default '{}',
   memories text[] not null default '{}',
   places_photos text[] not null default '{}',
+  -- Compressed sibling of each *_photos array (same order/length) plus a
+  -- compressed copy of the gift photo -- Basic tier shows these instead of
+  -- the full-quality originals; Super/Premium always use the originals.
+  -- Empty/shorter-than-original on rows saved before this existed, which
+  -- get_surprise() falls back on the original for.
+  her_photos_compressed text[] not null default '{}',
+  him_photos_compressed text[] not null default '{}',
+  places_photos_compressed text[] not null default '{}',
   unlock_at timestamptz,
   view_count integer not null default 0,
   first_viewed_at timestamptz,
@@ -33,6 +41,9 @@ create table if not exists surprises (
 alter table surprises add column if not exists memories text[] not null default '{}';
 alter table surprises add column if not exists him_nickname text not null default '';
 alter table surprises add column if not exists places_photos text[] not null default '{}';
+alter table surprises add column if not exists her_photos_compressed text[] not null default '{}';
+alter table surprises add column if not exists him_photos_compressed text[] not null default '{}';
+alter table surprises add column if not exists places_photos_compressed text[] not null default '{}';
 -- unlock_at: leave a surprise's link "not yet unlocked" until this moment, even
 -- though the link itself already works (Paystack verified, get_surprise() finds
 -- the row) -- see get_surprise() below for how it blanks out the actual content
@@ -138,6 +149,9 @@ returns table (
   him_photos text[],
   memories text[],
   places_photos text[],
+  her_photos_compressed text[],
+  him_photos_compressed text[],
+  places_photos_compressed text[],
   tier text,
   unlock_at timestamptz,
   locked boolean
@@ -159,6 +173,9 @@ as $$
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.him_photos end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.memories end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.places_photos end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.her_photos_compressed end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.him_photos_compressed end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.places_photos_compressed end,
     sp.tier,
     s.unlock_at,
     (s.unlock_at is not null and now() < s.unlock_at) as locked

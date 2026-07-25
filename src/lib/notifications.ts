@@ -23,6 +23,16 @@ export function sendWelcomeEmail(email: string) {
   callFunction('send-welcome-email', { email })
 }
 
+export function sendSignInEmail(accessToken: string) {
+  callFunction('send-signin-email', {}, accessToken)
+}
+
+// Login.tsx sets this right before supabase.auth.signUp() so AuthContext's
+// SIGNED_IN listener can skip the sign-in email for that one event — a fresh
+// signup with email confirmation disabled gets a session (and a SIGNED_IN
+// event) immediately, and it already gets its own welcome email.
+export const signupInProgress = { current: false }
+
 export function sendSurpriseCreatedEmail(surpriseId: string, accessToken: string) {
   callFunction('send-surprise-created-email', { surpriseId }, accessToken)
 }

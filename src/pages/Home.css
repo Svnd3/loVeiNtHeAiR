@@ -90,15 +90,18 @@
 }
 
 .home__preview-link {
+  position: absolute;
+  bottom: 14px;
+  left: 18px;
   color: var(--text-h);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: underline;
   opacity: 0.75;
   transition: opacity 0.15s ease;
 }
 
-.home__preview-link:hover {
+.home__surprise-box:hover .home__preview-link {
   opacity: 1;
 }
 
