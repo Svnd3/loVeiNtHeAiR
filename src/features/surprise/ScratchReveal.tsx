@@ -39,7 +39,15 @@ function FlipIcon() {
   )
 }
 
-function ScratchReveal({ himName, gift }: { himName: string; gift: SurpriseGift }) {
+function ScratchReveal({
+  himName,
+  gift,
+  premium = false,
+}: {
+  himName: string
+  gift: SurpriseGift
+  premium?: boolean
+}) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scratchingRef = useRef(false)
@@ -145,7 +153,12 @@ function ScratchReveal({ himName, gift }: { himName: string; gift: SurpriseGift 
       {revealed && <Confetti />}
       <h1 className="scratch-reveal__title">One more surprise</h1>
 
-      <div className={`scratch-card ${revealed ? 'scratch-card--revealed' : ''}`} ref={wrapRef}>
+      <div
+        className={`scratch-card ${revealed ? 'scratch-card--revealed' : ''} ${
+          revealed && premium ? 'scratch-card--premium' : ''
+        }`}
+        ref={wrapRef}
+      >
         <div className={`scratch-card__flip ${flipped ? 'scratch-card__flip--flipped' : ''}`}>
           <div className="scratch-card__content scratch-card__content--front">
             <img className="scratch-card__photo" src={gift.photo} alt={himName} />

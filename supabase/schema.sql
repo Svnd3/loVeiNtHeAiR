@@ -32,6 +32,46 @@ alter table surprises add column if not exists places_photos text[] not null def
 
 alter table surprises enable row level security;
 
+-- 1b. One row per successful Paystack charge for a surprise. Deliberately a
+-- separate table from `surprises` (not a `tier` column on it) so that the
+-- owner's normal "manage my own row" RLS policy below can never be used to
+-- grant themselves a paid tier by just UPDATE-ing it from devtools -- only
+-- the verify-surprise-payment edge function (service-role key, after Paystack
+-- itself confirms the charge) is able to write here. See "3b" below for how
+-- get_surprise() uses this to decide what she actually sees.
+create table if not exists surprise_payments (
+  id uuid primary key default gen_random_uuid(),
+  surprise_id uuid not null references surprises(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  tier text not null check (tier in ('basic', 'super', 'premium')),
+  amount integer not null,
+  paystack_reference text not null unique,
+  created_at timestamptz not null default now()
+);
+
+alter table surprise_payments enable row level security;
+
+-- Owners can see their own payment history (e.g. to know a surprise is
+-- still unpaid and needs the "complete payment" flow re-opened). No insert/
+-- update/delete policy exists for anon/authenticated -- see comment above.
+drop policy if exists "owners read their own surprise payments" on surprise_payments;
+create policy "owners read their own surprise payments"
+  on surprise_payments
+  for select
+  using (auth.uid() = user_id);
+
+-- One-time backfill: any surprise created before payments existed (e.g. the
+-- one you already tested and shared a link for) gets grandfathered in at
+-- 'premium' for free, so get_surprise() below doesn't suddenly start
+-- rejecting a link that already worked. Safe to re-run -- only inserts for
+-- surprises that still have zero payment rows.
+insert into surprise_payments (surprise_id, user_id, tier, amount, paystack_reference)
+select id, user_id, 'premium', 0, 'GRANDFATHERED_' || id::text
+from surprises s
+where not exists (
+  select 1 from surprise_payments sp where sp.surprise_id = s.id
+);
+
 -- 2. Only the creator (the signed-in "him") can read/write their own rows directly.
 -- This is intentionally NOT public — her link never talks to this table directly,
 -- it goes through the get_surprise() function below instead.
@@ -46,10 +86,26 @@ create policy "owners manage their surprises"
 -- SECURITY DEFINER lets this bypass the owner-only RLS policy above, but only ever
 -- returns the single row matching the exact uuid you pass in -- there's no way to
 -- list or enumerate other people's surprises through it.
+--
+-- The join against surprise_payments means this returns NOTHING until a real
+-- Paystack charge has been verified for this surprise -- an unpaid link
+-- simply doesn't work yet, even if someone already has the URL. If a
+-- surprise somehow has more than one payment row, the highest tier wins
+-- (there's no "downgrade" path, so this only matters if a retry double-paid).
 -- Postgres won't let CREATE OR REPLACE change a function's return columns (e.g.
 -- adding "memories" below), so drop it first -- safe to re-run either way.
+--
+-- The parameter is named p_surprise_id (not surprise_id) on purpose:
+-- surprise_payments has its own column literally called surprise_id, and in
+-- a plain SQL function a same-named column silently wins over a same-named
+-- parameter reference -- "where s.id = surprise_id" would resolve to
+-- sp.surprise_id (already pinned equal to s.id by the join), turning the
+-- filter into a no-op that returned an arbitrary row for ANY id, including
+-- ones that don't exist. Caught this by testing with a made-up uuid and
+-- getting back a real surprise's data back -- do not rename this parameter
+-- back to surprise_id.
 drop function if exists get_surprise(uuid);
-create or replace function get_surprise(surprise_id uuid)
+create or replace function get_surprise(p_surprise_id uuid)
 returns table (
   her_name text,
   her_nickname text,
@@ -61,16 +117,20 @@ returns table (
   her_photos text[],
   him_photos text[],
   memories text[],
-  places_photos text[]
+  places_photos text[],
+  tier text
 )
 language sql
 security definer
 set search_path = public
 stable
 as $$
-  select her_name, her_nickname, him_name, him_nickname, letter, gift, song, her_photos, him_photos, memories, places_photos
-  from surprises
-  where id = surprise_id
+  select s.her_name, s.her_nickname, s.him_name, s.him_nickname, s.letter, s.gift, s.song,
+         s.her_photos, s.him_photos, s.memories, s.places_photos, sp.tier
+  from surprises s
+  join surprise_payments sp on sp.surprise_id = s.id
+  where s.id = p_surprise_id
+  order by case sp.tier when 'premium' then 3 when 'super' then 2 else 1 end desc
   limit 1;
 $$;
 

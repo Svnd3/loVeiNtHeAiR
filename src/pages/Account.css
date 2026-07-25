@@ -248,6 +248,10 @@
   cursor: pointer;
 }
 
+.account-surprises__pay {
+  color: #a3543f;
+}
+
 .account-surprises__delete {
   border: none;
   background: none;

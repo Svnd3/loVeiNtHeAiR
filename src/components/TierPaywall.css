@@ -1,0 +1,175 @@
+.tier-paywall {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31, 61, 58, 0.5);
+}
+
+.tier-paywall__card {
+  width: min(720px, 100%);
+  max-height: 92svh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 30px 70px -30px rgba(31, 61, 58, 0.6);
+}
+
+.tier-paywall__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tier-paywall__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a3543f;
+}
+
+.tier-paywall__title {
+  margin-top: 4px;
+  font-size: clamp(1.3rem, 3.6vw, 1.6rem);
+  font-weight: 700;
+  color: #1f3d3a;
+}
+
+.tier-paywall__subtitle {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #6b8582;
+  max-width: 480px;
+}
+
+.tier-paywall__close {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #eef8f7;
+  color: #1f3d3a;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tier-paywall__tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.tier-paywall__tier {
+  text-align: left;
+  border: 1.5px solid #cfe3e1;
+  border-radius: 18px;
+  background: #f7fcfb;
+  padding: 18px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+}
+
+.tier-paywall__tier:hover {
+  border-color: #7bb8b3;
+  background: #eef8f7;
+}
+
+.tier-paywall__tier:active {
+  transform: scale(0.98);
+}
+
+.tier-paywall__tier--selected {
+  border-color: #1f3d3a;
+  background: #eef8f7;
+}
+
+.tier-paywall__tier-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tier-paywall__tier-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f3d3a;
+}
+
+.tier-paywall__tier-amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f3d3a;
+  white-space: nowrap;
+}
+
+.tier-paywall__tier-tagline {
+  font-size: 0.8rem;
+  color: #4a6764;
+}
+
+.tier-paywall__tier-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tier-paywall__tier-features li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #2c5450;
+}
+
+.tier-paywall__tier-features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #2f7a5e;
+  font-weight: 700;
+}
+
+.tier-paywall__status {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c5450;
+}
+
+.tier-paywall__error {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #a13d3d;
+}
+
+.tier-paywall__footnote {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9ab3af;
+}
+
+@media (max-width: 640px) {
+  .tier-paywall__tiers {
+    grid-template-columns: 1fr;
+  }
+}

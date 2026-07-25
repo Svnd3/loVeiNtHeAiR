@@ -8,6 +8,7 @@ import ScrollStory from '../features/surprise/ScrollStory'
 import SenderChip from '../features/surprise/SenderChip'
 import type { SongChoice } from '../features/surprise/songs'
 import type { SurpriseGift } from '../features/surprise/useProfile'
+import type { Tier } from '../lib/payments'
 import '../features/surprise/Surprise.css'
 import './SharedSurprise.css'
 
@@ -23,6 +24,7 @@ type FetchedSurprise = {
   him_photos: string[]
   memories: string[] | null
   places_photos: string[] | null
+  tier: Tier
 }
 
 const POLL_INTERVAL_MS = 4000
@@ -47,7 +49,7 @@ function SharedSurprise() {
 
     const fetchSurprise = (isFirstLoad: boolean) =>
       supabase
-        .rpc('get_surprise', { surprise_id: id })
+        .rpc('get_surprise', { p_surprise_id: id })
         .then(({ data: rows, error }) => {
           if (cancelled) return
           const row = Array.isArray(rows) ? rows[0] : null
@@ -92,6 +94,17 @@ function SharedSurprise() {
 
   const himName = data.him_nickname || data.him_name
 
+  // Basic doesn't include a custom song upload — fall back to the app's
+  // default track instead of playing what he uploaded. Library picks always
+  // play regardless of tier.
+  const songForTier =
+    data.tier === 'basic' && data.song?.type === 'upload' ? undefined : data.song ?? undefined
+
+  // The gift attachment (ticket/reservation/document) is a Premium-only
+  // reveal — strip it for Basic/Super even if he uploaded one.
+  const giftForTier =
+    data.tier === 'premium' ? data.gift : { ...data.gift, attachment: undefined }
+
   return (
     <div className="surprise">
       <SenderChip name={himName} />
@@ -100,12 +113,12 @@ function SharedSurprise() {
       {believed && (
         <>
           <LyricsBackdrop
-            song={data.song ?? undefined}
+            song={songForTier}
             currentTime={audioTime.currentTime}
             duration={audioTime.duration}
           />
           <AudioPlayer
-            song={data.song ?? undefined}
+            song={songForTier}
             onTimeUpdate={(currentTime, duration) => setAudioTime({ currentTime, duration })}
           />
           <ScrollStory
@@ -114,10 +127,12 @@ function SharedSurprise() {
             photos={photos}
             himPhotos={data.him_photos}
             letter={data.letter}
-            gift={data.gift}
+            gift={giftForTier}
             memories={data.memories ?? []}
             placesPhotos={data.places_photos ?? []}
+            premium={data.tier === 'premium'}
           />
+          {data.tier === 'basic' && <p className="shared-surprise-watermark">made with loveintheair</p>}
         </>
       )}
     </div>

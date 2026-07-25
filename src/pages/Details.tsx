@@ -4,6 +4,7 @@ import { compressImageToBlob } from '../lib/image'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
+import TierPaywall from '../components/TierPaywall'
 import './Details.css'
 
 // A photo is either one already uploaded (edit mode, loaded from the saved
@@ -830,6 +831,7 @@ function Details() {
   const [shareUrl, setShareUrl] = useState('')
   const [copied, setCopied] = useState(false)
   const [surpriseId, setSurpriseId] = useState('')
+  const [showPaywall, setShowPaywall] = useState(false)
   const [uploadTotal, setUploadTotal] = useState(0)
   const [uploadDone, setUploadDone] = useState(0)
   const [uploadError, setUploadError] = useState('')
@@ -1095,8 +1097,14 @@ function Details() {
 
       setSurpriseId(id)
       setShareUrl(`${window.location.origin}/s/${id}`)
-      setDone(true)
       runUploads(id, userId)
+      // Editing an already-paid surprise doesn't re-charge — only a brand
+      // new surprise needs to clear the paywall before its link is usable.
+      if (isEditing) {
+        setDone(true)
+      } else {
+        setShowPaywall(true)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong saving your surprise. Please try again.')
     } finally {
@@ -1118,6 +1126,21 @@ function Details() {
     } catch {
       // clipboard API unavailable — she can still select & copy the input manually
     }
+  }
+
+  if (showPaywall && surpriseId && session) {
+    return (
+      <TierPaywall
+        surpriseId={surpriseId}
+        userEmail={session.user.email ?? ''}
+        accessToken={session.access_token}
+        onSuccess={() => {
+          setShowPaywall(false)
+          setDone(true)
+        }}
+        onClose={() => navigate('/account')}
+      />
+    )
   }
 
   if (done) {

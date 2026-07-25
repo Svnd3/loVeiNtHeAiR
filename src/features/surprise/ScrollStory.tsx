@@ -26,6 +26,7 @@ function ScrollStory({
   gift,
   memories,
   placesPhotos,
+  premium = false,
 }: {
   herName: string
   himName: string
@@ -35,6 +36,7 @@ function ScrollStory({
   gift: SurpriseGift
   memories: string[]
   placesPhotos: string[]
+  premium?: boolean
 }) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const gapCount = SCROLL_LINES.length - 1
@@ -69,7 +71,7 @@ function ScrollStory({
 
       <LetterReveal herName={herName} himName={himName} letter={letter} />
 
-      <ScratchReveal himName={himName} gift={gift} />
+      <ScratchReveal himName={himName} gift={gift} premium={premium} />
 
       {lightboxSrc && <PhotoLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </div>

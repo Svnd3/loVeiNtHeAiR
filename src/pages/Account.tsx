@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { useSmartBack } from '../lib/useSmartBack'
+import TierPaywall from '../components/TierPaywall'
 import './Account.css'
 
 type SurpriseSummary = {
   id: string
   herName: string
   createdAt: string
+  paid: boolean
 }
 
 function Account() {
@@ -21,6 +23,7 @@ function Account() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [listError, setListError] = useState('')
+  const [payingSurpriseId, setPayingSurpriseId] = useState<string | null>(null)
 
   const userId = session?.user.id
 
@@ -28,26 +31,30 @@ function Account() {
     if (!userId) return
     let cancelled = false
 
-    supabase
-      .from('surprises')
-      .select('id, her_name, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error) {
-          setListError(error.message)
-        } else {
-          setSurprises(
-            (data ?? []).map((row) => ({
-              id: row.id as string,
-              herName: (row.her_name as string) || 'Untitled surprise',
-              createdAt: row.created_at as string,
-            })),
-          )
-        }
-        setLoadingSurprises(false)
-      })
+    Promise.all([
+      supabase
+        .from('surprises')
+        .select('id, her_name, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase.from('surprise_payments').select('surprise_id').eq('user_id', userId),
+    ]).then(([surprisesResult, paymentsResult]) => {
+      if (cancelled) return
+      if (surprisesResult.error) {
+        setListError(surprisesResult.error.message)
+      } else {
+        const paidIds = new Set((paymentsResult.data ?? []).map((row) => row.surprise_id as string))
+        setSurprises(
+          (surprisesResult.data ?? []).map((row) => ({
+            id: row.id as string,
+            herName: (row.her_name as string) || 'Untitled surprise',
+            createdAt: row.created_at as string,
+            paid: paidIds.has(row.id as string),
+          })),
+        )
+      }
+      setLoadingSurprises(false)
+    })
 
     return () => {
       cancelled = true
@@ -189,14 +196,24 @@ function Account() {
                   </div>
                 ) : (
                   <div className="account-surprises__actions">
-                    <a
-                      className="account-surprises__link"
-                      href={`/s/${surprise.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      view
-                    </a>
+                    {surprise.paid ? (
+                      <a
+                        className="account-surprises__link"
+                        href={`/s/${surprise.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        view
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        className="account-surprises__link account-surprises__pay"
+                        onClick={() => setPayingSurpriseId(surprise.id)}
+                      >
+                        complete payment
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="account-surprises__link"
@@ -219,6 +236,21 @@ function Account() {
           </ul>
         </div>
       </div>
+
+      {payingSurpriseId && session && (
+        <TierPaywall
+          surpriseId={payingSurpriseId}
+          userEmail={session.user.email ?? ''}
+          accessToken={session.access_token}
+          onSuccess={() => {
+            setSurprises((prev) =>
+              prev.map((s) => (s.id === payingSurpriseId ? { ...s, paid: true } : s)),
+            )
+            setPayingSurpriseId(null)
+          }}
+          onClose={() => setPayingSurpriseId(null)}
+        />
+      )}
     </main>
   )
 }

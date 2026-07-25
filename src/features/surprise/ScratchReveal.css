@@ -148,3 +148,19 @@
 .scratch-card--revealed {
   box-shadow: 0 24px 60px -24px rgba(36, 25, 39, 0.5), 0 0 0 3px var(--surprise-pink-border) inset;
 }
+
+.scratch-card--premium {
+  box-shadow: 0 24px 60px -24px rgba(36, 25, 39, 0.5), 0 0 0 3px #e0b23c inset;
+  animation: scratch-card-premium-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes scratch-card-premium-glow {
+  0%, 100% {
+    box-shadow: 0 24px 60px -24px rgba(36, 25, 39, 0.5), 0 0 0 3px #e0b23c inset,
+      0 0 0 0 rgba(224, 178, 60, 0.4);
+  }
+  50% {
+    box-shadow: 0 24px 60px -24px rgba(36, 25, 39, 0.5), 0 0 0 3px #e0b23c inset,
+      0 0 24px 4px rgba(224, 178, 60, 0.45);
+  }
+}
