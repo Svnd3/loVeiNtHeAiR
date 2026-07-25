@@ -1,8 +1,6 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import DodgeYesNo from './DodgeYesNo'
 import './RememberQuiz.css'
-
-const SCROLL_LOCK_KEYS = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End']
 
 function RememberQuiz({
   photos,
@@ -12,31 +10,6 @@ function RememberQuiz({
   onOpenPhoto: (src: string) => void
 }) {
   const [revealed, setRevealed] = useState(false)
-
-  // Keep her from scrolling past this section until she presses Yes.
-  useEffect(() => {
-    if (revealed) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    const preventWheel = (event: WheelEvent) => event.preventDefault()
-    const preventTouchMove = (event: TouchEvent) => event.preventDefault()
-    const preventScrollKeys = (event: KeyboardEvent) => {
-      if (SCROLL_LOCK_KEYS.includes(event.key)) event.preventDefault()
-    }
-
-    window.addEventListener('wheel', preventWheel, { passive: false })
-    window.addEventListener('touchmove', preventTouchMove, { passive: false })
-    window.addEventListener('keydown', preventScrollKeys)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('wheel', preventWheel)
-      window.removeEventListener('touchmove', preventTouchMove)
-      window.removeEventListener('keydown', preventScrollKeys)
-    }
-  }, [revealed])
 
   if (!revealed) {
     return (
