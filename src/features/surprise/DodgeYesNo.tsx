@@ -37,10 +37,12 @@ function positionStyle(pos: Point | null, zIndex: number): CSSProperties {
 }
 
 function DodgeYesNo({
+  greeting,
   title,
   hint,
   onYes,
 }: {
+  greeting?: ReactNode
   title: ReactNode
   hint?: ReactNode
   onYes: () => void
@@ -134,6 +136,7 @@ function DodgeYesNo({
 
   return (
     <section className="dodge-quiz" ref={containerRef} onPointerMove={handleContainerPointerMove}>
+      {greeting && <p className="dodge-quiz__greeting">{greeting}</p>}
       <h1 className="dodge-quiz__title">{title}</h1>
       {hint && <p className="dodge-quiz__hint">{hint}</p>}
 

@@ -22,7 +22,7 @@ function Surprise() {
         onTimeUpdate={(currentTime, duration) => setAudioTime({ currentTime, duration })}
       />
 
-      {!believed && <LoveQuiz onBelieve={() => setBelieved(true)} />}
+      {!believed && <LoveQuiz herName={profile.herName} onBelieve={() => setBelieved(true)} />}
       {believed && (
         <>
           <LyricsBackdrop

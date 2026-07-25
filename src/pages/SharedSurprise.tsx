@@ -170,7 +170,7 @@ function SharedSurprise() {
         onTimeUpdate={(currentTime, duration) => setAudioTime({ currentTime, duration })}
       />
 
-      {!believed && <LoveQuiz onBelieve={() => setBelieved(true)} />}
+      {!believed && <LoveQuiz herName={herName} onBelieve={() => setBelieved(true)} />}
       {believed && (
         <>
           <LyricsBackdrop

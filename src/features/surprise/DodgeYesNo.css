@@ -10,7 +10,13 @@
   gap: 10px;
   padding: 24px;
   background: linear-gradient(160deg, var(--surprise-pink) 0%, #c7e3e1 100%);
-  touch-action: none;
+}
+
+.dodge-quiz__greeting {
+  font-family: 'Achiko', cursive;
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  color: var(--text-h);
+  text-align: center;
 }
 
 .dodge-quiz__title {
@@ -54,6 +60,7 @@
 
 .dodge-quiz__btn--no {
   user-select: none;
+  touch-action: none;
 }
 
 .dodge-quiz__btn--no:disabled {
