@@ -117,6 +117,23 @@ function SharedSurprise() {
       })),
     [data],
   )
+  // Auto-generated questions shuffle their distractor options with
+  // Math.random() on every call (see generateAutoQuestions) -- memoized here
+  // so that stays fixed for as long as `data` hasn't actually changed,
+  // instead of re-shuffling on every re-render (e.g. the frequent audioTime
+  // updates while a song is playing).
+  const knowMeQuestions = useMemo(() => {
+    if (!data) return []
+    return data.know_me_mode === 'custom' && data.know_me_quiz.length > 0
+      ? data.know_me_quiz
+      : generateAutoQuestions({
+          her_nickname: data.her_nickname,
+          him_nickname: data.him_nickname,
+          him_country: data.him_country,
+          gift: data.gift,
+          song: data.song,
+        })
+  }, [data])
 
   // Counts as "she's seen it" once she's clicked past the love-quiz intro and
   // it's actually unlocked -- not on the bare page load (a link preview bot
@@ -228,16 +245,6 @@ function SharedSurprise() {
   // auto-generated set if he picked custom but left it empty/incomplete, so
   // a Super+ buyer never sees a blank quiz.
   const showKnowMeQuiz = data.tier !== 'basic'
-  const knowMeQuestions =
-    data.know_me_mode === 'custom' && data.know_me_quiz.length > 0
-      ? data.know_me_quiz
-      : generateAutoQuestions({
-          her_nickname: data.her_nickname,
-          him_nickname: data.him_nickname,
-          him_country: data.him_country,
-          gift: data.gift,
-          song: data.song,
-        })
 
   return (
     <div className="surprise">
