@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext'
 import { compressImageToBlob } from '../lib/image'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
 import TierPaywall from '../components/TierPaywall'
+import LoveLoader from '../components/LoveLoader'
 import { computePricing } from '../lib/payments'
 import { sendSurpriseCreatedEmail } from '../lib/notifications'
 import './Details.css'
@@ -1416,7 +1417,7 @@ function Details() {
   if (loadingExisting) {
     return (
       <main className="details-page details-page--done">
-        <h1>Loading your surprise…</h1>
+        <LoveLoader label="Loading your surprise…" />
       </main>
     )
   }

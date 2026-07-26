@@ -6,6 +6,7 @@ import AudioPlayer from '../features/surprise/AudioPlayer'
 import LyricsBackdrop from '../features/surprise/LyricsBackdrop'
 import ScrollStory from '../features/surprise/ScrollStory'
 import SenderChip from '../features/surprise/SenderChip'
+import LoveLoader from '../components/LoveLoader'
 import { isSongAllowedForTier, type SongChoice } from '../features/surprise/songs'
 import type { SurpriseGift } from '../features/surprise/useProfile'
 import { MIXED_QUESTION_CAP, type Tier } from '../lib/payments'
@@ -139,7 +140,7 @@ function SharedSurprise() {
   if (status === 'loading') {
     return (
       <main className="shared-surprise-status">
-        <p>opening your surprise…</p>
+        <LoveLoader label="opening your surprise…" />
       </main>
     )
   }
