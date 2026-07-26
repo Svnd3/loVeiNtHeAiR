@@ -36,6 +36,12 @@
   display: flex;
   gap: 20px;
   justify-content: center;
+  /* The buttons inside become position: absolute once their coordinates are
+     measured (see DodgeYesNo.tsx), which would otherwise collapse this div to
+     zero height and re-center everything above it — shifting the title out
+     from under the buttons' now-stale locked position. Reserving the same
+     height up front keeps that measurement stable. */
+  min-height: 54px;
 }
 
 .dodge-quiz__btn {
@@ -95,5 +101,9 @@
     height: 48px;
     padding: 0 34px;
     font-size: 1rem;
+  }
+
+  .dodge-quiz__buttons {
+    min-height: 48px;
   }
 }
