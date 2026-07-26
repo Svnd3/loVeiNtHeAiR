@@ -40,7 +40,6 @@ function Surprise() {
             herName={profile.herName}
             himName={profile.himName}
             photos={profile.photos}
-            himPhotos={profile.himPhotos}
             letter={profile.letter}
             gift={profile.gift}
             memories={profile.memories}

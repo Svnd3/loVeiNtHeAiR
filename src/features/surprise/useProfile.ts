@@ -16,11 +16,20 @@ type StoredGift = {
   attachment?: string
 }
 
+// Rendered as a 3-slide swipeable card (MemoryCard.tsx): the prompt, then
+// an optional photo, then an optional caption -- a missing photo/caption
+// just skips that slide.
+export type SurpriseMemory = {
+  prompt: string
+  photo?: string
+  caption?: string
+}
+
 type StoredProfile = {
   her: { country: string; name: string; photos: string[] }
   him: { country: string; name: string; photos: string[] }
   letter: string
-  memories?: string[]
+  memories?: SurpriseMemory[]
   places?: string[]
   gift?: StoredGift
   song?: SongChoice
@@ -34,7 +43,7 @@ export type SurpriseProfile = {
   photos: string[]
   himPhotos: string[]
   letter: string
-  memories: string[]
+  memories: SurpriseMemory[]
   placesPhotos: string[]
   gift: SurpriseGift
   song?: SongChoice
@@ -55,9 +64,15 @@ Thank you for believing in this, even for a second.
 Yours,
 Me`
 
-const PLACEHOLDER_MEMORIES = [
-  "do you remember the night it poured and we still walked home anyway?",
-  "do you remember the playlist you made me that I never told you I replay?",
+const PLACEHOLDER_MEMORIES: SurpriseMemory[] = [
+  {
+    prompt: 'the night it poured and we still walked home anyway?',
+    photo: PLACEHOLDER_PHOTOS[1],
+    caption: "I was so scared but nikajikaza 😂",
+  },
+  {
+    prompt: 'the playlist you made me that I never told you I replay?',
+  },
 ]
 
 const PLACEHOLDER_GIFT: SurpriseGift = {
@@ -108,7 +123,7 @@ export function useProfile(): SurpriseProfile {
       photos: photos.length > 0 ? photos : PLACEHOLDER_PHOTOS,
       himPhotos: himPhotos.length > 0 ? himPhotos : PLACEHOLDER_PHOTOS,
       letter: stored.letter?.trim() || PLACEHOLDER_LETTER,
-      memories: stored.memories?.filter((m) => m.trim()) ?? [],
+      memories: stored.memories?.filter((m) => m.prompt?.trim()) ?? [],
       placesPhotos: stored.places?.filter(Boolean) ?? [],
       gift: stored.gift?.photo ? stored.gift : PLACEHOLDER_GIFT,
       song: stored.song,

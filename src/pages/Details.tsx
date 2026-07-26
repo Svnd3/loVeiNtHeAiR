@@ -299,14 +299,113 @@ function QuestionSection({
 
 const MAX_MEMORIES = 6
 
+// A memory shows up mid-scroll as a 3-slide swipeable card: the prompt
+// ("do you remember...?"), then an optional photo, then an optional caption
+// explaining it. Photo follows the same PhotoItem upload lifecycle (and gets
+// a compressed sibling produced for Basic tier) as every other photo field.
+type MemoryDraft = {
+  prompt: string
+  photo: PhotoItem | null
+  caption: string
+}
+
+const emptyMemory: MemoryDraft = { prompt: '', photo: null, caption: '' }
+
+function MemoryEntry({
+  memory,
+  onChange,
+  onRemove,
+}: {
+  memory: MemoryDraft
+  onChange: (next: MemoryDraft) => void
+  onRemove: () => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const preview = useMemo(() => (memory.photo ? photoPreviewUrl(memory.photo) : null), [memory.photo])
+  useEffect(() => {
+    return () => {
+      if (preview && !(memory.photo && isExistingPhoto(memory.photo))) URL.revokeObjectURL(preview)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview])
+
+  const pickPhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) onChange({ ...memory, photo: { file } })
+    event.target.value = ''
+  }
+
+  return (
+    <div className="memory-entry">
+      <button
+        type="button"
+        className="photo-grid__remove memory-entry__remove"
+        onClick={onRemove}
+        aria-label="Remove memory"
+      >
+        ×
+      </button>
+
+      <label className="memory-entry__field">
+        <span>Do you remember...?</span>
+        <textarea
+          className="memory-entry__textarea"
+          placeholder="e.g. our first time meeting?"
+          value={memory.prompt}
+          onChange={(event) => onChange({ ...memory, prompt: event.target.value })}
+          rows={2}
+        />
+      </label>
+
+      <div className="memory-entry__photo">
+        <span className="gift-photo__label">Photo (optional)</span>
+        {preview ? (
+          <div className="gift-photo__preview memory-entry__photo-preview">
+            <img src={preview} alt="" />
+            <button
+              type="button"
+              className="photo-grid__remove"
+              onClick={() => onChange({ ...memory, photo: null })}
+              aria-label="Remove photo"
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="photo-grid__add gift-photo__add"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <span>+</span>
+            Add photo
+          </button>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
+      </div>
+
+      <label className="memory-entry__field">
+        <span>Explain it (optional)</span>
+        <textarea
+          className="memory-entry__textarea"
+          placeholder="e.g. I was so scared but nikajikaza 😂"
+          value={memory.caption}
+          onChange={(event) => onChange({ ...memory, caption: event.target.value })}
+          rows={2}
+        />
+      </label>
+    </div>
+  )
+}
+
 function MemorySection({
   memories,
   onChange,
 }: {
-  memories: string[]
-  onChange: (next: string[]) => void
+  memories: MemoryDraft[]
+  onChange: (next: MemoryDraft[]) => void
 }) {
-  const updateAt = (index: number, value: string) => {
+  const updateAt = (index: number, value: MemoryDraft) => {
     onChange(memories.map((m, i) => (i === index ? value : m)))
   }
 
@@ -321,34 +420,23 @@ function MemorySection({
       </h2>
       <p className="profile-section__hint">
         A special moment, or something you think she's forgotten. Each one shows up mid-scroll as
-        your photo — she swipes it to reveal what you wrote.
+        a 3-part swipe: your prompt, a photo, then your explanation.
       </p>
 
       {memories.map((memory, index) => (
-        <div className="memory-entry" key={index}>
-          <textarea
-            className="memory-entry__textarea"
-            placeholder="e.g. Do you remember the night it poured and we still walked home anyway?"
-            value={memory}
-            onChange={(event) => updateAt(index, event.target.value)}
-            rows={3}
-          />
-          <button
-            type="button"
-            className="photo-grid__remove memory-entry__remove"
-            onClick={() => removeAt(index)}
-            aria-label="Remove memory"
-          >
-            ×
-          </button>
-        </div>
+        <MemoryEntry
+          key={index}
+          memory={memory}
+          onChange={(next) => updateAt(index, next)}
+          onRemove={() => removeAt(index)}
+        />
       ))}
 
       {memories.length < MAX_MEMORIES && (
         <button
           type="button"
           className="letter-templates-btn"
-          onClick={() => onChange([...memories, ''])}
+          onClick={() => onChange([...memories, { ...emptyMemory }])}
         >
           + Add a memory
         </button>
@@ -951,7 +1039,7 @@ function Details() {
   const [him, setHim] = useState<Profile>(emptyProfile)
   const [letter, setLetter] = useState('')
   const [questions, setQuestions] = useState<string[]>([])
-  const [memories, setMemories] = useState<string[]>([])
+  const [memories, setMemories] = useState<MemoryDraft[]>([])
   const [places, setPlaces] = useState<PhotoItem[]>([])
   const [gift, setGift] = useState<GiftDraft>(emptyGift)
   const [song, setSong] = useState<SongChoice | null>(null)
@@ -1007,7 +1095,19 @@ function Details() {
         })
         setLetter(data.letter ?? '')
         setQuestions((data.questions as string[]) ?? [])
-        setMemories((data.memories as string[]) ?? [])
+        const memoriesData = (data.memories as {
+          prompt?: string
+          photo?: string
+          photo_compressed?: string
+          caption?: string
+        }[]) ?? []
+        setMemories(
+          memoriesData.map((m) => ({
+            prompt: m.prompt ?? '',
+            photo: m.photo ? { url: m.photo, compressedUrl: m.photo_compressed || m.photo } : null,
+            caption: m.caption ?? '',
+          })),
+        )
         setPlaces(
           zipPhotos(
             (data.places_photos as string[]) ?? [],
@@ -1069,7 +1169,8 @@ function Details() {
   }
 
   const runUploads = async (id: string, userId: string) => {
-    const total = her.photos.length + him.photos.length + places.length + 3 // +1 gift photo, +1 gift attachment, +1 song
+    const total =
+      her.photos.length + him.photos.length + places.length + memories.length + 3 // +1 gift photo, +1 gift attachment, +1 song
     setUploadTotal(total)
     setUploadDone(0)
     setUploadError('')
@@ -1156,14 +1257,36 @@ function Details() {
         }).then((result) => result.original)
       }
 
-      const [herPhotosResult, himPhotosResult, placesPhotosResult, giftPhotoResult, giftAttachment] =
-        await Promise.all([
-          resolvePhotos(her.photos, 'her'),
-          resolvePhotos(him.photos, 'him'),
-          resolvePhotos(places, 'place'),
-          resolveGiftPhoto(),
-          resolveGiftAttachment(),
-        ])
+      // Each memory's photo is optional -- an empty original means "no photo
+      // for this one", which SharedSurprise.tsx/MemoryCard.tsx treat as "skip
+      // the photo slide" rather than showing a broken image.
+      const resolveMemoryPhoto = (item: PhotoItem | null) => {
+        if (!item) {
+          bumpDone()
+          return Promise.resolve({ original: '', compressed: '' })
+        }
+        if (isExistingPhoto(item)) {
+          bumpDone()
+          return Promise.resolve({ original: item.url, compressed: item.compressedUrl })
+        }
+        return uploadImage(item.file, `memory-${crypto.randomUUID()}`)
+      }
+
+      const [
+        herPhotosResult,
+        himPhotosResult,
+        placesPhotosResult,
+        giftPhotoResult,
+        giftAttachment,
+        memoryPhotoResults,
+      ] = await Promise.all([
+        resolvePhotos(her.photos, 'her'),
+        resolvePhotos(him.photos, 'him'),
+        resolvePhotos(places, 'place'),
+        resolveGiftPhoto(),
+        resolveGiftAttachment(),
+        Promise.all(memories.map((m) => resolveMemoryPhoto(m.photo))),
+      ])
 
       const herPhotos = herPhotosResult.map((p) => p.original)
       const herPhotosCompressed = herPhotosResult.map((p) => p.compressed)
@@ -1171,6 +1294,14 @@ function Details() {
       const himPhotosCompressed = himPhotosResult.map((p) => p.compressed)
       const placesPhotos = placesPhotosResult.map((p) => p.original)
       const placesPhotosCompressed = placesPhotosResult.map((p) => p.compressed)
+      const memoriesPayload = memories
+        .map((m, i) => ({
+          prompt: m.prompt.trim(),
+          photo: memoryPhotoResults[i].original,
+          photo_compressed: memoryPhotoResults[i].compressed,
+          caption: m.caption.trim(),
+        }))
+        .filter((m) => m.prompt || m.caption || m.photo)
 
       let songPayload: SongChoice = song!
       if (song?.type === 'upload' && songFile) {
@@ -1193,6 +1324,7 @@ function Details() {
           him_photos_compressed: himPhotosCompressed,
           places_photos: placesPhotos,
           places_photos_compressed: placesPhotosCompressed,
+          memories: memoriesPayload,
           song: songPayload,
           gift: {
             type: gift.type,
@@ -1257,7 +1389,6 @@ function Details() {
         him_country: him.country.trim(),
         letter: letter.trim(),
         questions: questions.map((q) => q.trim()).filter(Boolean),
-        memories: memories.map((m) => m.trim()).filter(Boolean),
         song: song.type === 'library' ? song : null,
         unlock_at: unlockAt ? new Date(unlockAt).toISOString() : null,
       }
@@ -1293,6 +1424,7 @@ function Details() {
           him_photos_compressed: [],
           places_photos: [],
           places_photos_compressed: [],
+          memories: [],
         })
         if (insertError) throw insertError
       }

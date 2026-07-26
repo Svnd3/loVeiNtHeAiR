@@ -1,9 +1,26 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import './MemoryCard.css'
 
-function MemoryCard({ text, photo }: { text: string; photo?: string }) {
+// Built from whichever fields he actually filled in -- the prompt always
+// shows first, then the photo slide (if he added one), then the caption
+// slide (if he wrote one). A memory with just a prompt renders as a single,
+// non-swipeable slide.
+type Face = 'prompt' | 'photo' | 'caption'
+
+function MemoryCard({
+  prompt,
+  photo,
+  caption,
+}: {
+  prompt: string
+  photo?: string
+  caption?: string
+}) {
+  const faces: Face[] = ['prompt', ...(photo ? (['photo'] as const) : []), ...(caption ? (['caption'] as const) : [])]
+  const lastIndex = faces.length - 1
+
   const hitRef = useRef<HTMLDivElement>(null)
-  const [halfWidth, setHalfWidth] = useState(0)
+  const [cardWidth, setCardWidth] = useState(0)
   const [progress, setProgress] = useState(0)
   const [settling, setSettling] = useState(false)
   const drag = useRef<{ startX: number; startProgress: number; moved: boolean } | null>(null)
@@ -12,7 +29,7 @@ function MemoryCard({ text, photo }: { text: string; photo?: string }) {
     const el = hitRef.current
     if (!el) return
     const observer = new ResizeObserver(([entry]) => {
-      setHalfWidth(entry.contentRect.width / 2)
+      setCardWidth(entry.contentRect.width)
     })
     observer.observe(el)
     return () => observer.disconnect()
@@ -20,40 +37,40 @@ function MemoryCard({ text, photo }: { text: string; photo?: string }) {
 
   const settleTo = (target: number) => {
     setSettling(true)
-    setProgress(target)
+    setProgress(Math.min(lastIndex, Math.max(0, target)))
   }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (lastIndex === 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
     setSettling(false)
     drag.current = { startX: event.clientX, startProgress: progress, moved: false }
   }
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!drag.current || halfWidth === 0) return
+    if (!drag.current || cardWidth === 0) return
     const deltaX = event.clientX - drag.current.startX
     if (Math.abs(deltaX) > 4) drag.current.moved = true
-    const deltaProgress = -deltaX / (halfWidth * 2)
-    const next = Math.min(1, Math.max(0, drag.current.startProgress + deltaProgress))
+    const deltaProgress = -deltaX / cardWidth
+    const next = Math.min(lastIndex, Math.max(0, drag.current.startProgress + deltaProgress))
     setProgress(next)
   }
 
   const endDrag = () => {
     if (!drag.current) return
-    const { moved } = drag.current
+    const { moved, startProgress } = drag.current
     drag.current = null
     if (!moved) {
-      settleTo(progress > 0.5 ? 0 : 1)
+      settleTo(startProgress >= lastIndex ? 0 : startProgress + 1)
       return
     }
-    settleTo(progress > 0.5 ? 1 : 0)
+    settleTo(Math.round(progress))
   }
+
+  const step = Math.round(progress)
 
   return (
     <section className="memory-card">
-      {/* The hit area stays flat (no rotation) so its pointer bounding box never
-          collapses edge-on -- only the scene inside it flips in 3D. Rotating the
-          hit-testing element itself broke dragging back once it hit 90deg. */}
       <div
         className="memory-card__hit"
         ref={hitRef}
@@ -63,34 +80,48 @@ function MemoryCard({ text, photo }: { text: string; photo?: string }) {
         onPointerCancel={endDrag}
       >
         <div
-          className="memory-card__scene"
+          className="memory-card__track"
           style={{
-            transform: `rotateY(${-progress * 90}deg)`,
+            width: `${faces.length * 100}%`,
+            transform: `translateX(-${(progress * 100) / faces.length}%)`,
             transition: settling ? 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
           }}
         >
-          <div
-            className="memory-card__face memory-card__face--front"
-            style={{ transform: `translateZ(${halfWidth}px)` }}
-          >
-            <p className="memory-card__label">do you remember?</p>
-            <p className="memory-card__text">{text}</p>
-            <div className="memory-card__hint">
-              <span className="memory-card__hint-arrow">←</span>
-              swipe
+          {faces.map((face) => (
+            <div
+              className={`memory-card__face memory-card__face--${face}`}
+              style={{ width: `${100 / faces.length}%` }}
+              key={face}
+            >
+              {face === 'prompt' && (
+                <>
+                  <p className="memory-card__label">do you remember</p>
+                  <p className="memory-card__text">{prompt}</p>
+                </>
+              )}
+              {face === 'photo' && photo && <img src={photo} alt="" draggable={false} />}
+              {face === 'caption' && (
+                <>
+                  <p className="memory-card__label">and then...</p>
+                  <p className="memory-card__text">{caption}</p>
+                </>
+              )}
             </div>
-          </div>
-          <div
-            className="memory-card__face memory-card__face--back"
-            style={{ transform: `rotateY(90deg) translateZ(${halfWidth}px)` }}
-          >
-            {photo && <img src={photo} alt="" draggable={false} />}
-            <div className="memory-card__hint">
-              swipe back
-              <span className="memory-card__hint-arrow">→</span>
-            </div>
-          </div>
+          ))}
         </div>
+
+        {lastIndex > 0 && step < lastIndex && (
+          <div className="memory-card__hint">
+            swipe
+            <span className="memory-card__hint-arrow">←</span>
+          </div>
+        )}
+        {lastIndex > 0 && step === lastIndex && (
+          <div className="memory-card__hint">
+            swipe back
+            <span className="memory-card__hint-arrow">→</span>
+          </div>
+        )}
       </div>
     </section>
   )

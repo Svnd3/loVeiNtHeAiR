@@ -6,7 +6,7 @@ import LetterReveal from './LetterReveal'
 import ScratchReveal from './ScratchReveal'
 import MemoryCard from './MemoryCard'
 import RememberQuiz from './RememberQuiz'
-import type { SurpriseGift } from './useProfile'
+import type { SurpriseGift, SurpriseMemory } from './useProfile'
 import './ScrollStory.css'
 
 const SCROLL_LINES = [
@@ -21,7 +21,6 @@ function ScrollStory({
   herName,
   himName,
   photos,
-  himPhotos,
   letter,
   gift,
   memories,
@@ -31,17 +30,14 @@ function ScrollStory({
   herName: string
   himName: string
   photos: string[]
-  himPhotos: string[]
   letter: string
   gift: SurpriseGift
-  memories: string[]
+  memories: SurpriseMemory[]
   placesPhotos: string[]
   premium?: boolean
 }) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const gapCount = SCROLL_LINES.length - 1
-  const memoryPhoto = (index: number) =>
-    himPhotos.length > 0 ? himPhotos[index % himPhotos.length] : undefined
 
   return (
     <div className="scroll-story">
@@ -56,15 +52,20 @@ function ScrollStory({
               <p>{line}</p>
             </RevealLine>
             {index < gapCount && memories[index] && (
-              <MemoryCard text={memories[index]} photo={memoryPhoto(index)} />
+              <MemoryCard
+                prompt={memories[index].prompt}
+                photo={memories[index].photo}
+                caption={memories[index].caption}
+              />
             )}
           </Fragment>
         ))}
         {memories.slice(gapCount).map((memory, extraIndex) => (
           <MemoryCard
             key={`extra-${extraIndex}`}
-            text={memory}
-            photo={memoryPhoto(gapCount + extraIndex)}
+            prompt={memory.prompt}
+            photo={memory.photo}
+            caption={memory.caption}
           />
         ))}
       </div>

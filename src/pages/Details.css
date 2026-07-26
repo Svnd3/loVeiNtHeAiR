@@ -354,11 +354,29 @@
 .memory-entry {
   position: relative;
   margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #e3f0ee;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memory-entry__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memory-entry__field span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2c5450;
 }
 
 .memory-entry__textarea {
   width: 100%;
-  padding: 12px 40px 12px 14px;
+  padding: 12px 14px;
   border: 1px solid #cfe3e1;
   border-radius: 12px;
   font: inherit;
@@ -370,6 +388,15 @@
 
 .memory-entry__textarea:focus {
   border-color: #7bb8b3;
+}
+
+.memory-entry__photo {
+  margin: 0;
+}
+
+.memory-entry__photo .memory-entry__photo-preview {
+  width: 96px;
+  aspect-ratio: 1;
 }
 
 .memory-entry__remove {

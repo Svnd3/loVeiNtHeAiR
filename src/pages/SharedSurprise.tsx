@@ -8,11 +8,18 @@ import ScrollStory from '../features/surprise/ScrollStory'
 import SenderChip from '../features/surprise/SenderChip'
 import LoveLoader from '../components/LoveLoader'
 import { isSongAllowedForTier, type SongChoice } from '../features/surprise/songs'
-import type { SurpriseGift } from '../features/surprise/useProfile'
+import type { SurpriseGift, SurpriseMemory } from '../features/surprise/useProfile'
 import { MIXED_QUESTION_CAP, type Tier } from '../lib/payments'
 import { recordSurpriseView } from '../lib/notifications'
 import '../features/surprise/Surprise.css'
 import './SharedSurprise.css'
+
+type FetchedMemory = {
+  prompt: string
+  photo?: string
+  photo_compressed?: string
+  caption?: string
+}
 
 type FetchedSurprise = {
   her_name: string
@@ -28,7 +35,7 @@ type FetchedSurprise = {
   her_photos_compressed: string[] | null
   him_photos_compressed: string[] | null
   places_photos_compressed: string[] | null
-  memories: string[] | null
+  memories: FetchedMemory[] | null
   places_photos: string[] | null
   tier: Tier
   unlock_at: string | null
@@ -44,6 +51,10 @@ const POLL_INTERVAL_MS = 4000
 function pickQuality(originals: string[], compressed: string[] | null, tier: Tier): string[] {
   if (tier !== 'basic') return originals
   return originals.map((url, i) => compressed?.[i] || url)
+}
+
+function pickPhotoQuality(original: string, compressed: string | undefined, tier: Tier): string {
+  return tier === 'basic' ? compressed || original : original
 }
 
 function formatCountdown(msRemaining: number) {
@@ -90,6 +101,15 @@ function SharedSurprise() {
     [data],
   )
   const photos = useMemo(() => [...herPhotos, ...himPhotos], [herPhotos, himPhotos])
+  const memories = useMemo<SurpriseMemory[]>(
+    () =>
+      (data?.memories ?? []).map((m) => ({
+        prompt: m.prompt,
+        photo: m.photo ? pickPhotoQuality(m.photo, m.photo_compressed, data!.tier) : undefined,
+        caption: m.caption,
+      })),
+    [data],
+  )
 
   // Counts as "she's seen it" once she's clicked past the love-quiz intro and
   // it's actually unlocked -- not on the bare page load (a link preview bot
@@ -192,7 +212,7 @@ function SharedSurprise() {
   // itself follows the same compressed-for-Basic rule as the gallery photos.
   const giftForTier = {
     ...data.gift,
-    photo: data.tier === 'basic' ? data.gift.photo_compressed || data.gift.photo : data.gift.photo,
+    photo: pickPhotoQuality(data.gift.photo, data.gift.photo_compressed, data.tier),
     attachment: data.tier === 'premium' ? data.gift.attachment : undefined,
   }
 
@@ -223,10 +243,9 @@ function SharedSurprise() {
             herName={herName}
             himName={himName}
             photos={photos}
-            himPhotos={himPhotos}
             letter={data.letter}
             gift={giftForTier}
-            memories={data.memories ?? []}
+            memories={memories}
             placesPhotos={placesPhotos}
             premium={data.tier === 'premium'}
           />

@@ -18,7 +18,12 @@ create table if not exists surprises (
   song jsonb,
   her_photos text[] not null default '{}',
   him_photos text[] not null default '{}',
-  memories text[] not null default '{}',
+  -- Each element is { prompt, photo, photo_compressed, caption } -- the "do
+  -- you remember X?" prompt, an optional photo for it (compressed sibling
+  -- same as the other photo fields), and an optional explanation caption.
+  -- Rendered as a 3-slide swipeable card (MemoryCard.tsx); a missing photo
+  -- or caption just skips that slide.
+  memories jsonb not null default '[]'::jsonb,
   places_photos text[] not null default '{}',
   -- Compressed sibling of each *_photos array (same order/length) plus a
   -- compressed copy of the gift photo -- Basic tier shows these instead of
@@ -39,6 +44,30 @@ create table if not exists surprises (
 -- Adds the columns when this script is re-run against a table created before
 -- they existed. No-op on a fresh install (the create table above already has them).
 alter table surprises add column if not exists memories text[] not null default '{}';
+-- One-time migration: memories used to be a plain text[] (just the prompt,
+-- with a photo cycled in from him_photos at display time and no caption at
+-- all). Converts each old string into { prompt: <text>, photo: '',
+-- photo_compressed: '', caption: '' } so existing surprises keep their
+-- prompts. Only runs while the column is still text[] -- a no-op (including
+-- on a fresh install, where the create table above already made it jsonb).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'surprises' and column_name = 'memories' and data_type = 'ARRAY'
+  ) then
+    alter table surprises rename column memories to memories_old;
+    alter table surprises add column memories jsonb not null default '[]'::jsonb;
+    update surprises set memories = (
+      select coalesce(
+        jsonb_agg(jsonb_build_object('prompt', m, 'photo', '', 'photo_compressed', '', 'caption', '')),
+        '[]'::jsonb
+      )
+      from unnest(memories_old) as m
+    );
+    alter table surprises drop column memories_old;
+  end if;
+end $$;
 alter table surprises add column if not exists him_nickname text not null default '';
 alter table surprises add column if not exists places_photos text[] not null default '{}';
 alter table surprises add column if not exists her_photos_compressed text[] not null default '{}';
@@ -163,7 +192,7 @@ returns table (
   song jsonb,
   her_photos text[],
   him_photos text[],
-  memories text[],
+  memories jsonb,
   places_photos text[],
   her_photos_compressed text[],
   him_photos_compressed text[],
@@ -188,7 +217,7 @@ as $$
     case when s.unlock_at is not null and now() < s.unlock_at then null else s.song end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.her_photos end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.him_photos end,
-    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.memories end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '[]'::jsonb else s.memories end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.places_photos end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.her_photos_compressed end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.him_photos_compressed end,
