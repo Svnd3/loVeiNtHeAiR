@@ -197,7 +197,13 @@ function Login() {
     setError('')
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/details` },
+      options: {
+        redirectTo: `${window.location.origin}/details`,
+        // Forces Google's account chooser every time, instead of silently
+        // reusing whichever Google account is already active in the browser
+        // — otherwise "Switch account" on the Account page wouldn't work.
+        queryParams: { prompt: 'select_account' },
+      },
     })
     if (oauthError) setError(oauthError.message)
   }

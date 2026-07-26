@@ -74,11 +74,20 @@ create table if not exists surprise_payments (
   id uuid primary key default gen_random_uuid(),
   surprise_id uuid not null references surprises(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  tier text not null check (tier in ('basic', 'super', 'premium')),
+  tier text not null check (tier in ('basic', 'super', 'mixed', 'premium')),
   amount integer not null,
   paystack_reference text not null unique,
   created_at timestamptz not null default now()
 );
+
+-- Widens the check constraint when this script is re-run against a table
+-- created before 'mixed' existed -- 'mixed' is the auto-detected 620 tier
+-- for content that needs Premium only because it combines a Super-only
+-- extra with a Premium-only one (see computePricing in src/lib/payments.ts).
+-- No-op on a fresh install (the create table above already allows it).
+alter table surprise_payments drop constraint if exists surprise_payments_tier_check;
+alter table surprise_payments add constraint surprise_payments_tier_check
+  check (tier in ('basic', 'super', 'mixed', 'premium'));
 
 alter table surprise_payments enable row level security;
 
@@ -190,7 +199,7 @@ as $$
   from surprises s
   join surprise_payments sp on sp.surprise_id = s.id
   where s.id = p_surprise_id
-  order by case sp.tier when 'premium' then 3 when 'super' then 2 else 1 end desc
+  order by case sp.tier when 'premium' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
   limit 1;
 $$;
 

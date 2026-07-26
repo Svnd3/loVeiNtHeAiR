@@ -111,6 +111,11 @@ function Account() {
     navigate('/')
   }
 
+  const handleSwitchAccount = async () => {
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
+
   const handleDelete = async (id: string) => {
     if (!userId) return
     setDeletingId(id)
@@ -170,6 +175,9 @@ function Account() {
 
           <button type="button" className="account-card__edit" onClick={() => navigate('/details')}>
             Create a new surprise
+          </button>
+          <button type="button" className="account-card__switch" onClick={handleSwitchAccount}>
+            Switch account
           </button>
           <button type="button" className="account-card__signout" onClick={handleSignOut}>
             Sign out

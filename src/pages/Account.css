@@ -139,6 +139,28 @@
   transform: scale(0.97);
 }
 
+.account-card__switch {
+  width: 100%;
+  margin-top: 10px;
+  height: 44px;
+  border: 1.5px solid #cfe3e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f3d3a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.account-card__switch:hover {
+  background: #eef8f7;
+}
+
+.account-card__switch:active {
+  transform: scale(0.97);
+}
+
 .account-card__signout {
   width: 100%;
   margin-top: 10px;

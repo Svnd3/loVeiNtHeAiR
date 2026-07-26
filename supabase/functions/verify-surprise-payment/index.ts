@@ -14,22 +14,19 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Kept in sync with TIERS in src/lib/payments.ts, which only drives what the
-// UI shows and what amount gets sent to Paystack -- this copy is what
-// actually enforces the price.
+// Kept in sync with TIERS/MIXED_TIER in src/lib/payments.ts, which only
+// drives what the UI shows and what amount gets sent to Paystack -- this
+// copy is what actually enforces the price. "mixed" isn't one of the normal
+// always-offered tiers (see computeRequiredPricing below for when it applies)
+// but is a real value surprise_payments.tier accepts.
 const TIERS: Record<string, number> = {
   basic: 499,
   super: 599,
+  mixed: 620,
   premium: 759,
 };
 
-const TIER_RANK: Record<string, number> = { basic: 0, super: 1, premium: 2 };
-
-// 620 instead of the normal 759 -- charged only when the surprise needs
-// Premium purely because it mixes a Super-only extra with a Premium-only one
-// at once, not because he used Premium's own big extras (own song upload,
-// gift attachment). Kept in sync with MIXED_TIER_AMOUNT in src/lib/payments.ts.
-const MIXED_TIER_AMOUNT = 620;
+const TIER_RANK: Record<string, number> = { basic: 0, super: 1, mixed: 2, premium: 3 };
 
 // Mirrors the `tier: 'super'` entries in src/features/surprise/songs.ts --
 // duplicated here (small, stable list) rather than imported since this runs
@@ -47,6 +44,11 @@ const FREE_ACCESS_EMAILS = ["hezronsande2@gmail.com"];
 // computePricing() shows him client-side, straight from what's actually
 // saved on the row -- so paying for a cheaper tier than the surprise's real
 // content needs is rejected here regardless of what the client claims.
+//
+// Song upload and a gift attachment are Premium's real differentiators --
+// either one always requires full Premium, no Mixed discount available.
+// Mixed exists only for the smaller case: a Super-tier song pick combined
+// with more than one question, neither of which alone needs more than Super.
 function computeRequiredPricing(surprise: {
   song: { type?: string; id?: string } | null;
   gift: { attachment?: string } | null;
@@ -56,19 +58,19 @@ function computeRequiredPricing(surprise: {
   const usesSuperOnlyFeature =
     (surprise.song?.type === "library" && SUPER_TIER_SONG_IDS.includes(surprise.song.id ?? "")) ||
     questionCount === 1;
-  const usesPremiumOnlyFeature =
-    surprise.song?.type === "upload" || Boolean(surprise.gift?.attachment) || questionCount >= 2;
+  const usesBigPremiumFeature = surprise.song?.type === "upload" || Boolean(surprise.gift?.attachment);
+  const hasExtraQuestions = questionCount >= 2;
 
-  if (usesPremiumOnlyFeature && usesSuperOnlyFeature) {
-    return { requiredTier: "premium", amount: MIXED_TIER_AMOUNT, mixed: true };
+  if (usesBigPremiumFeature || (hasExtraQuestions && !usesSuperOnlyFeature)) {
+    return { requiredTier: "premium", amount: TIERS.premium };
   }
-  if (usesPremiumOnlyFeature) {
-    return { requiredTier: "premium", amount: TIERS.premium, mixed: false };
+  if (usesSuperOnlyFeature && hasExtraQuestions) {
+    return { requiredTier: "mixed", amount: TIERS.mixed };
   }
   if (usesSuperOnlyFeature) {
-    return { requiredTier: "super", amount: TIERS.super, mixed: false };
+    return { requiredTier: "super", amount: TIERS.super };
   }
-  return { requiredTier: "basic", amount: TIERS.basic, mixed: false };
+  return { requiredTier: "basic", amount: TIERS.basic };
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -134,9 +136,8 @@ serve(async (req) => {
     }
 
     // What he's actually saved may need a higher tier than the one he's
-    // trying to pay for (or qualify for the mixed 620 instead of the flat
-    // tier price) -- re-derived here from the row itself, never trusted from
-    // the client, same reasoning as the ownership check above.
+    // trying to pay for -- re-derived here from the row itself, never
+    // trusted from the client, same reasoning as the ownership check above.
     const pricing = computeRequiredPricing(surprise);
     if (TIER_RANK[tier] < TIER_RANK[pricing.requiredTier]) {
       return jsonResponse(

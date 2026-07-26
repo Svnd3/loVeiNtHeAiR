@@ -8,7 +8,7 @@ import ScrollStory from '../features/surprise/ScrollStory'
 import SenderChip from '../features/surprise/SenderChip'
 import { isSongAllowedForTier, type SongChoice } from '../features/surprise/songs'
 import type { SurpriseGift } from '../features/surprise/useProfile'
-import type { Tier } from '../lib/payments'
+import { MIXED_QUESTION_CAP, type Tier } from '../lib/payments'
 import { recordSurpriseView } from '../lib/notifications'
 import '../features/surprise/Surprise.css'
 import './SharedSurprise.css'
@@ -172,16 +172,19 @@ function SharedSurprise() {
   // need Super or above — fall back to the app's default track otherwise.
   const songForTier = isSongAllowedForTier(data.song, data.tier) ? data.song ?? undefined : undefined
 
-  // A custom gate question is Super/Premium-only — Basic always gets the
-  // default "Do you believe in love?" even if he wrote some. Super is capped
-  // at just the first one even if he wrote several; Premium gets all of them
-  // (same fill-in-anything-but-gate-at-display pattern as songForTier/giftForTier).
+  // A custom gate question is Super/Mixed/Premium-only — Basic always gets
+  // the default "Do you believe in love?" even if he wrote some. Super is
+  // capped at just the first one, Mixed at the first three, Premium gets all
+  // of them (same fill-in-anything-but-gate-at-display pattern as
+  // songForTier/giftForTier).
   const questionsForTier =
     data.tier === 'basic'
       ? undefined
       : data.tier === 'super'
         ? data.questions.slice(0, 1)
-        : data.questions
+        : data.tier === 'mixed'
+          ? data.questions.slice(0, MIXED_QUESTION_CAP)
+          : data.questions
 
   // The gift attachment (ticket/reservation/document) is a Premium-only
   // reveal — strip it for Basic/Super even if he uploaded one. The gift photo

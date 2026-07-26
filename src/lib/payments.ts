@@ -1,7 +1,7 @@
 import { supabaseUrl, supabaseAnonKey } from './supabaseClient'
 import { resolveLibrarySong, type SongChoice } from '../features/surprise/songs'
 
-export type Tier = 'basic' | 'super' | 'premium'
+export type Tier = 'basic' | 'super' | 'mixed' | 'premium'
 
 // Accounts that skip Paystack entirely and get whatever tier they pick for
 // free (see TierPaywall.tsx) -- founder/testing accounts only. Visible in the
@@ -68,15 +68,29 @@ export const TIERS: TierConfig[] = [
   },
 ]
 
-export const TIER_RANK: Record<Tier, number> = { basic: 0, super: 1, premium: 2 }
+// Not one of the always-offered TIERS above -- Mixed only ever shows up in
+// TierPaywall when computePricing() below actually lands on it, for content
+// that genuinely spans a Super-only extra and a Premium-only one at once. Its
+// cap (3 questions, no song upload/attachment/final-reveal flourish) is what
+// keeps it a real notch below Premium rather than Premium at a discount.
+export const MIXED_TIER: TierConfig = {
+  id: 'mixed',
+  name: 'Mixed',
+  amount: 620,
+  tagline: 'A bit of both',
+  features: [
+    'Everything in Super',
+    'A couple of extra questions (up to 3)',
+  ],
+}
 
-// Charged instead of the normal 759 when content needs Premium only because
-// it mixes a Super-only extra with a Premium-only one at the same time (e.g.
-// a Super-tier library song plus a second question) -- not because he
-// actually used Premium's own big extras (uploaded song, gift attachment).
-// Kept in sync with supabase/functions/verify-surprise-payment/index.ts,
-// which re-derives and enforces this same amount server-side.
-export const MIXED_TIER_AMOUNT = 620
+export const MIXED_QUESTION_CAP = 3
+
+export const TIER_RANK: Record<Tier, number> = { basic: 0, super: 1, mixed: 2, premium: 3 }
+
+export function tierConfig(id: Tier): TierConfig {
+  return id === 'mixed' ? MIXED_TIER : TIERS.find((t) => t.id === id)!
+}
 
 export type PricingResult = {
   // The cheapest tier this content actually qualifies for -- TierPaywall
@@ -84,13 +98,17 @@ export type PricingResult = {
   // he wants a cheaper one instead.
   requiredTier: Tier
   amount: number
-  mixed: boolean
 }
 
 // Determines the minimum tier (and its price) that what he's actually filled
 // in requires, so the paywall can refuse to sell a tier that would silently
 // get its content stripped at display time (see songForTier/giftForTier/
 // questionsForTier in SharedSurprise.tsx).
+//
+// Song upload and a gift attachment are Premium's real differentiators --
+// either one always requires full Premium, no Mixed discount available.
+// Mixed exists only for the smaller case: a Super-tier song pick combined
+// with more than one question, neither of which alone needs more than Super.
 export function computePricing({
   song,
   hasGiftAttachment,
@@ -102,20 +120,19 @@ export function computePricing({
 }): PricingResult {
   const librarySongTier = resolveLibrarySong(song ?? undefined)?.tier
   const usesSuperOnlyFeature = librarySongTier === 'super' || questionCount === 1
-  const usesPremiumOnlyFeature = song?.type === 'upload' || hasGiftAttachment || questionCount >= 2
+  const usesBigPremiumFeature = song?.type === 'upload' || hasGiftAttachment
+  const hasExtraQuestions = questionCount >= 2
 
-  const priceOf = (tier: Tier) => TIERS.find((t) => t.id === tier)!.amount
-
-  if (usesPremiumOnlyFeature && usesSuperOnlyFeature) {
-    return { requiredTier: 'premium', amount: MIXED_TIER_AMOUNT, mixed: true }
+  if (usesBigPremiumFeature || (hasExtraQuestions && !usesSuperOnlyFeature)) {
+    return { requiredTier: 'premium', amount: tierConfig('premium').amount }
   }
-  if (usesPremiumOnlyFeature) {
-    return { requiredTier: 'premium', amount: priceOf('premium'), mixed: false }
+  if (usesSuperOnlyFeature && hasExtraQuestions) {
+    return { requiredTier: 'mixed', amount: MIXED_TIER.amount }
   }
   if (usesSuperOnlyFeature) {
-    return { requiredTier: 'super', amount: priceOf('super'), mixed: false }
+    return { requiredTier: 'super', amount: tierConfig('super').amount }
   }
-  return { requiredTier: 'basic', amount: priceOf('basic'), mixed: false }
+  return { requiredTier: 'basic', amount: tierConfig('basic').amount }
 }
 
 const VERIFY_PAYMENT_URL = `${supabaseUrl}/functions/v1/verify-surprise-payment`

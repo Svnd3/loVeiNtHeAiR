@@ -2,9 +2,11 @@ import { useRef, useState } from 'react'
 import {
   TIERS,
   TIER_RANK,
+  MIXED_TIER,
   FREE_ACCESS_EMAILS,
   generatePaymentReference,
   verifySurprisePayment,
+  tierConfig,
   type PricingResult,
   type Tier,
 } from '../lib/payments'
@@ -12,18 +14,21 @@ import './TierPaywall.css'
 
 declare global {
   interface Window {
-    PaystackPop?: {
-      setup: (config: {
+    // v2 Inline JS (required for Apple Pay — v1 doesn't support it). The
+    // checkout() method auto-detects Apple devices/Safari and shows an Apple
+    // Pay button ahead of the normal checkout, with no extra markup needed.
+    PaystackPop?: new () => {
+      checkout: (config: {
         key: string
         email: string
         amount: number
         currency: string
         channels: string[]
         ref: string
-        label: string
-        callback: (response: { reference: string }) => void
-        onClose: () => void
-      }) => { openIframe: () => void }
+        onSuccess: (transaction: { reference: string }) => void
+        onCancel: () => void
+        onError?: (error: { message: string }) => void
+      }) => Promise<void>
     }
   }
 }
@@ -54,11 +59,12 @@ export default function TierPaywall({
   const [errorMessage, setErrorMessage] = useState('')
   const confirmingRef = useRef(false)
 
-  // Only the exact required tier can carry the mixed-pricing discount —
-  // choosing to pay for something ranked above the minimum is a voluntary
-  // upgrade and always costs that tier's normal listed price.
-  const amountFor = (tier: (typeof TIERS)[number]) =>
-    tier.id === pricing.requiredTier ? pricing.amount : tier.amount
+  // Mixed isn't one of the normal always-offered tiers — it only shows up
+  // (between Super and Premium) when his content actually needs it.
+  const displayTiers =
+    pricing.requiredTier === 'mixed'
+      ? [TIERS[0], TIERS[1], MIXED_TIER, TIERS[2]]
+      : TIERS
 
   const isFreeAccess = FREE_ACCESS_EMAILS.includes(userEmail.toLowerCase())
 
@@ -98,24 +104,28 @@ export default function TierPaywall({
     }
 
     const reference = generatePaymentReference(tier.id)
+    const paystackPop = new window.PaystackPop()
 
-    const handler = window.PaystackPop.setup({
+    paystackPop.checkout({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: userEmail || 'creator@loveintheair.app',
-      amount: amountFor(tier) * 100,
+      amount: tier.amount * 100,
       currency: 'KES',
+      // Apple Pay only shows up on Apple devices/Safari; everyone else still
+      // sees the normal checkout with these channels.
       channels: ['mobile_money', 'card'],
       ref: reference,
-      label: `loveintheair — ${tier.name}`,
-      callback: (response) => {
-        confirmPayment(response.reference, tier.id)
+      onSuccess: (transaction) => {
+        confirmPayment(transaction.reference, tier.id)
       },
-      onClose: () => {
+      onCancel: () => {
         if (!confirmingRef.current) setSelectedTierId(null)
       },
+      onError: (error) => {
+        setStage('error')
+        setErrorMessage(error.message || "We couldn't start this payment. Please try again.")
+      },
     })
-
-    handler.openIframe()
   }
 
   return (
@@ -130,7 +140,7 @@ export default function TierPaywall({
             </p>
             {pricing.requiredTier !== 'basic' && (
               <p className="tier-paywall__subtitle">
-                What you added needs at least <strong>{TIERS.find((t) => t.id === pricing.requiredTier)?.name}</strong> to
+                What you added needs at least <strong>{tierConfig(pricing.requiredTier).name}</strong> to
                 show — go back and remove the extra song/questions/attachment if you want a cheaper tier instead.
               </p>
             )}
@@ -149,7 +159,7 @@ export default function TierPaywall({
         </div>
 
         <div className="tier-paywall__tiers">
-          {TIERS.map((tier) => {
+          {displayTiers.map((tier) => {
             const locked = TIER_RANK[tier.id] < TIER_RANK[pricing.requiredTier]
             return (
               <button
@@ -162,7 +172,7 @@ export default function TierPaywall({
               >
                 <div className="tier-paywall__tier-head">
                   <span className="tier-paywall__tier-name">{tier.name}</span>
-                  <span className="tier-paywall__tier-amount">KSh {amountFor(tier)}</span>
+                  <span className="tier-paywall__tier-amount">KSh {tier.amount}</span>
                 </div>
                 <p className="tier-paywall__tier-tagline">{tier.tagline}</p>
                 <ul className="tier-paywall__tier-features">
@@ -172,7 +182,7 @@ export default function TierPaywall({
                 </ul>
                 {locked && (
                   <p className="tier-paywall__tier-locked-note">
-                    Needs what you added — pick {TIERS.find((t) => t.id === pricing.requiredTier)?.name} instead
+                    Needs what you added — pick {tierConfig(pricing.requiredTier).name} instead
                   </p>
                 )}
               </button>
