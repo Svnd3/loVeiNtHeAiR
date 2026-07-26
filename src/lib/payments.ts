@@ -31,7 +31,12 @@ export const TIERS: TierConfig[] = [
     name: 'Super',
     amount: 599,
     tagline: 'Make it sound like the two of you',
-    features: ['Everything in Basic', 'A few extra songs from the library', 'No loveintheair mark on her page'],
+    features: [
+      'Everything in Basic',
+      'A few extra songs from the library',
+      'No loveintheair mark on her page',
+      'Ask her your own yes/no question instead of the default one',
+    ],
   },
   {
     id: 'premium',

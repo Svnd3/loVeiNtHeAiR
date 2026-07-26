@@ -887,6 +887,7 @@ function Details() {
   const [her, setHer] = useState<Profile>(emptyProfile)
   const [him, setHim] = useState<Profile>(emptyProfile)
   const [letter, setLetter] = useState('')
+  const [question, setQuestion] = useState('')
   const [memories, setMemories] = useState<string[]>([])
   const [places, setPlaces] = useState<PhotoItem[]>([])
   const [gift, setGift] = useState<GiftDraft>(emptyGift)
@@ -942,6 +943,7 @@ function Details() {
           ),
         })
         setLetter(data.letter ?? '')
+        setQuestion(data.question ?? '')
         setMemories((data.memories as string[]) ?? [])
         setPlaces(
           zipPhotos(
@@ -1191,6 +1193,7 @@ function Details() {
         him_nickname: him.nickname.trim(),
         him_country: him.country.trim(),
         letter: letter.trim(),
+        question: question.trim(),
         memories: memories.map((m) => m.trim()).filter(Boolean),
         song: song.type === 'library' ? song : null,
         unlock_at: unlockAt ? new Date(unlockAt).toISOString() : null,
@@ -1420,6 +1423,24 @@ function Details() {
           value={letter}
           onChange={(event) => setLetter(event.target.value)}
           rows={8}
+        />
+      </div>
+
+      <div className="letter-section">
+        <h2 className="profile-section__title">
+          Ask her your own question <TierBadge tier="super" />
+        </h2>
+        <p className="profile-section__hint">
+          Replaces "Do you believe in love?" as the yes/no she has to get past before it opens.
+          Leave blank to keep the default — Basic always uses the default either way.
+        </p>
+        <input
+          className="letter-textarea"
+          type="text"
+          placeholder='e.g. "Will you be my girlfriend?"'
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          maxLength={120}
         />
       </div>
 

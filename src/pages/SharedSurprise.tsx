@@ -19,6 +19,7 @@ type FetchedSurprise = {
   him_name: string
   him_nickname: string
   letter: string
+  question: string
   gift: SurpriseGift
   song: SongChoice | null
   her_photos: string[]
@@ -171,6 +172,11 @@ function SharedSurprise() {
   // need Super or above — fall back to the app's default track otherwise.
   const songForTier = isSongAllowedForTier(data.song, data.tier) ? data.song ?? undefined : undefined
 
+  // A custom gate question is Super/Premium-only — Basic always gets the
+  // default "Do you believe in love?" even if he wrote one (same
+  // fill-in-anything-but-gate-at-display pattern as songForTier/giftForTier).
+  const questionForTier = data.tier !== 'basic' && data.question ? data.question : undefined
+
   // The gift attachment (ticket/reservation/document) is a Premium-only
   // reveal — strip it for Basic/Super even if he uploaded one. The gift photo
   // itself follows the same compressed-for-Basic rule as the gallery photos.
@@ -193,7 +199,9 @@ function SharedSurprise() {
         onTimeUpdate={(currentTime, duration) => setAudioTime({ currentTime, duration })}
       />
 
-      {!believed && <LoveQuiz herName={herName} onBelieve={() => setBelieved(true)} />}
+      {!believed && (
+        <LoveQuiz herName={herName} question={questionForTier} onBelieve={() => setBelieved(true)} />
+      )}
       {believed && (
         <>
           <LyricsBackdrop
