@@ -9,11 +9,11 @@
 }
 
 .scroll-story__line {
-  min-height: 38dvh;
+  min-height: 18dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 24px;
+  padding: 8px 24px;
   text-align: center;
 }
 
