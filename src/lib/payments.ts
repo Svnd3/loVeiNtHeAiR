@@ -51,6 +51,7 @@ export const TIERS: TierConfig[] = [
       'A few extra songs from the library',
       'No loveintheair mark on her page',
       'Ask her your own yes/no question instead of the default one',
+      '"How well do you know me?" 3-question mini-quiz',
     ],
   },
   {

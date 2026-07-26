@@ -4,6 +4,13 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import { compressImageToBlob } from '../lib/image'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
+import {
+  MAX_KNOW_ME_QUESTIONS,
+  MIN_KNOW_ME_OPTIONS,
+  MAX_KNOW_ME_OPTIONS,
+  type KnowMeQuestion,
+  type KnowMeMode,
+} from '../features/surprise/knowMeQuiz'
 import TierPaywall from '../components/TierPaywall'
 import LoveLoader from '../components/LoveLoader'
 import { computePricing } from '../lib/payments'
@@ -292,6 +299,144 @@ function QuestionSection({
         >
           + Add a question
         </button>
+      )}
+    </div>
+  )
+}
+
+const KNOW_ME_MODES: { value: KnowMeMode; label: string }[] = [
+  { value: 'auto', label: 'Auto-generate' },
+  { value: 'custom', label: 'Write my own' },
+]
+
+const emptyKnowMeQuestion = (): KnowMeQuestion => ({ question: '', options: ['', ''], correctIndex: 0 })
+
+function KnowMeQuizSection({
+  mode,
+  onModeChange,
+  quiz,
+  onQuizChange,
+}: {
+  mode: KnowMeMode
+  onModeChange: (next: KnowMeMode) => void
+  quiz: KnowMeQuestion[]
+  onQuizChange: (next: KnowMeQuestion[]) => void
+}) {
+  const updateQuestion = (index: number, next: KnowMeQuestion) => {
+    onQuizChange(quiz.map((q, i) => (i === index ? next : q)))
+  }
+
+  const removeQuestion = (index: number) => {
+    onQuizChange(quiz.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="letter-section">
+      <h2 className="profile-section__title">
+        How well does she know you? <TierBadge tier="super" />
+      </h2>
+      <p className="profile-section__hint">
+        A 3-question mini-quiz she plays right after the yes/no gate. Auto-generate builds it from
+        what you've already filled in below (her/your nickname, the gift, the song, your country) —
+        or write your own questions and mark the right answer.
+      </p>
+
+      <div className="gift-type">
+        {KNOW_ME_MODES.map((option) => (
+          <button
+            type="button"
+            key={option.value}
+            className={`gift-type__option ${mode === option.value ? 'gift-type__option--active' : ''}`}
+            onClick={() => onModeChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'custom' && (
+        <>
+          {quiz.map((entry, qIndex) => (
+            <div className="know-me-builder__question" key={qIndex}>
+              <div className="know-me-builder__option">
+                <input
+                  className="letter-textarea"
+                  type="text"
+                  placeholder={`Question ${qIndex + 1}, e.g. "Where did we first meet?"`}
+                  value={entry.question}
+                  onChange={(event) => updateQuestion(qIndex, { ...entry, question: event.target.value })}
+                  maxLength={120}
+                />
+                <button
+                  type="button"
+                  className="photo-grid__remove"
+                  onClick={() => removeQuestion(qIndex)}
+                  aria-label="Remove question"
+                >
+                  ×
+                </button>
+              </div>
+
+              {entry.options.map((option, oIndex) => (
+                <div className="know-me-builder__option" key={oIndex}>
+                  <input
+                    type="radio"
+                    name={`know-me-correct-${qIndex}`}
+                    checked={entry.correctIndex === oIndex}
+                    onChange={() => updateQuestion(qIndex, { ...entry, correctIndex: oIndex })}
+                    aria-label={`Mark answer ${oIndex + 1} as correct`}
+                  />
+                  <input
+                    className="letter-textarea"
+                    type="text"
+                    placeholder={`Answer ${oIndex + 1}`}
+                    value={option}
+                    onChange={(event) => {
+                      const options = entry.options.map((o, i) => (i === oIndex ? event.target.value : o))
+                      updateQuestion(qIndex, { ...entry, options })
+                    }}
+                    maxLength={80}
+                  />
+                  {entry.options.length > MIN_KNOW_ME_OPTIONS && (
+                    <button
+                      type="button"
+                      className="photo-grid__remove"
+                      onClick={() => {
+                        const options = entry.options.filter((_, i) => i !== oIndex)
+                        const correctIndex =
+                          entry.correctIndex >= options.length ? 0 : entry.correctIndex
+                        updateQuestion(qIndex, { ...entry, options, correctIndex })
+                      }}
+                      aria-label="Remove answer"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {entry.options.length < MAX_KNOW_ME_OPTIONS && (
+                <button
+                  type="button"
+                  className="letter-templates-btn"
+                  onClick={() => updateQuestion(qIndex, { ...entry, options: [...entry.options, ''] })}
+                >
+                  + Add an answer
+                </button>
+              )}
+            </div>
+          ))}
+
+          {quiz.length < MAX_KNOW_ME_QUESTIONS && (
+            <button
+              type="button"
+              className="letter-templates-btn"
+              onClick={() => onQuizChange([...quiz, emptyKnowMeQuestion()])}
+            >
+              + Add a question
+            </button>
+          )}
+        </>
       )}
     </div>
   )
@@ -1039,6 +1184,8 @@ function Details() {
   const [him, setHim] = useState<Profile>(emptyProfile)
   const [letter, setLetter] = useState('')
   const [questions, setQuestions] = useState<string[]>([])
+  const [knowMeMode, setKnowMeMode] = useState<KnowMeMode>('auto')
+  const [knowMeQuiz, setKnowMeQuiz] = useState<KnowMeQuestion[]>([])
   const [memories, setMemories] = useState<MemoryDraft[]>([])
   const [places, setPlaces] = useState<PhotoItem[]>([])
   const [gift, setGift] = useState<GiftDraft>(emptyGift)
@@ -1095,6 +1242,8 @@ function Details() {
         })
         setLetter(data.letter ?? '')
         setQuestions((data.questions as string[]) ?? [])
+        setKnowMeMode((data.know_me_mode as KnowMeMode) ?? 'auto')
+        setKnowMeQuiz((data.know_me_quiz as KnowMeQuestion[]) ?? [])
         const memoriesData = (data.memories as {
           prompt?: string
           photo?: string
@@ -1389,6 +1538,26 @@ function Details() {
         him_country: him.country.trim(),
         letter: letter.trim(),
         questions: questions.map((q) => q.trim()).filter(Boolean),
+        know_me_mode: knowMeMode,
+        // Only complete questions are kept -- filtering individual blank
+        // options after the fact (instead of dropping the whole question)
+        // would shift indices out from under correctIndex.
+        know_me_quiz:
+          knowMeMode === 'custom'
+            ? knowMeQuiz
+                .filter(
+                  (q) =>
+                    q.question.trim() &&
+                    q.options.length >= MIN_KNOW_ME_OPTIONS &&
+                    q.options.every((o) => o.trim()),
+                )
+                .map((q) => ({
+                  question: q.question.trim(),
+                  options: q.options.map((o) => o.trim()),
+                  correctIndex: q.correctIndex,
+                }))
+                .slice(0, MAX_KNOW_ME_QUESTIONS)
+            : [],
         song: song.type === 'library' ? song : null,
         unlock_at: unlockAt ? new Date(unlockAt).toISOString() : null,
       }
@@ -1632,6 +1801,13 @@ function Details() {
       </div>
 
       <QuestionSection questions={questions} onChange={setQuestions} />
+
+      <KnowMeQuizSection
+        mode={knowMeMode}
+        onModeChange={setKnowMeMode}
+        quiz={knowMeQuiz}
+        onQuizChange={setKnowMeQuiz}
+      />
 
       <MemorySection memories={memories} onChange={setMemories} />
 

@@ -9,6 +9,8 @@ import SenderChip from '../features/surprise/SenderChip'
 import LoveLoader from '../components/LoveLoader'
 import { isSongAllowedForTier, type SongChoice } from '../features/surprise/songs'
 import type { SurpriseGift, SurpriseMemory } from '../features/surprise/useProfile'
+import KnowMeQuiz from '../features/surprise/KnowMeQuiz'
+import { generateAutoQuestions, type KnowMeMode, type KnowMeQuestion } from '../features/surprise/knowMeQuiz'
 import { MIXED_QUESTION_CAP, type Tier } from '../lib/payments'
 import { recordSurpriseView } from '../lib/notifications'
 import '../features/surprise/Surprise.css'
@@ -24,10 +26,14 @@ type FetchedMemory = {
 type FetchedSurprise = {
   her_name: string
   her_nickname: string
+  her_country: string
   him_name: string
   him_nickname: string
+  him_country: string
   letter: string
   questions: string[]
+  know_me_mode: KnowMeMode
+  know_me_quiz: KnowMeQuestion[]
   gift: SurpriseGift
   song: SongChoice | null
   her_photos: string[]
@@ -86,6 +92,7 @@ function SharedSurprise() {
   const [data, setData] = useState<FetchedSurprise | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [believed, setBelieved] = useState(false)
+  const [knowMeDone, setKnowMeDone] = useState(false)
   const [audioTime, setAudioTime] = useState({ currentTime: 0, duration: 0 })
   const viewRecordedRef = useRef(false)
   const herPhotos = useMemo(
@@ -216,6 +223,22 @@ function SharedSurprise() {
     attachment: data.tier === 'premium' ? data.gift.attachment : undefined,
   }
 
+  // "How well do you know me?" mini-quiz — Super/Mixed/Premium only (same
+  // cascade as every other "Everything in Super" extra). Falls back to the
+  // auto-generated set if he picked custom but left it empty/incomplete, so
+  // a Super+ buyer never sees a blank quiz.
+  const showKnowMeQuiz = data.tier !== 'basic'
+  const knowMeQuestions =
+    data.know_me_mode === 'custom' && data.know_me_quiz.length > 0
+      ? data.know_me_quiz
+      : generateAutoQuestions({
+          her_nickname: data.her_nickname,
+          him_nickname: data.him_nickname,
+          him_country: data.him_country,
+          gift: data.gift,
+          song: data.song,
+        })
+
   return (
     <div className="surprise">
       <SenderChip name={himName} />
@@ -232,7 +255,10 @@ function SharedSurprise() {
       {!believed && (
         <LoveQuiz herName={herName} questions={questionsForTier} onBelieve={() => setBelieved(true)} />
       )}
-      {believed && (
+      {believed && showKnowMeQuiz && !knowMeDone && (
+        <KnowMeQuiz herName={herName} questions={knowMeQuestions} onDone={() => setKnowMeDone(true)} />
+      )}
+      {believed && (!showKnowMeQuiz || knowMeDone) && (
         <>
           <LyricsBackdrop
             song={songForTier}

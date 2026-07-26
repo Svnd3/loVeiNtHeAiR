@@ -79,6 +79,15 @@ alter table surprises add column if not exists places_photos_compressed text[] n
 -- Empty array (the default) means "use the built-in question".
 alter table surprises drop column if exists question;
 alter table surprises add column if not exists questions text[] not null default '{}';
+-- know_me_mode/know_me_quiz: the "How well do you know me?" mini-quiz (see
+-- KnowMeQuiz.tsx) for Super/Mixed/Premium. 'auto' (the default) means
+-- SharedSurprise.tsx builds the questions itself from her_nickname/
+-- him_nickname/him_country/gift/song via generateAutoQuestions() in
+-- knowMeQuiz.ts; 'custom' means know_me_quiz holds up to 3 objects of the
+-- shape { question, options: string[], correctIndex }, authored in Details.tsx.
+alter table surprises add column if not exists know_me_mode text not null default 'auto'
+  check (know_me_mode in ('auto', 'custom'));
+alter table surprises add column if not exists know_me_quiz jsonb not null default '[]'::jsonb;
 -- unlock_at: leave a surprise's link "not yet unlocked" until this moment, even
 -- though the link itself already works (Paystack verified, get_surprise() finds
 -- the row) -- see get_surprise() below for how it blanks out the actual content
@@ -184,10 +193,14 @@ create or replace function get_surprise(p_surprise_id uuid)
 returns table (
   her_name text,
   her_nickname text,
+  her_country text,
   him_name text,
   him_nickname text,
+  him_country text,
   letter text,
   questions text[],
+  know_me_mode text,
+  know_me_quiz jsonb,
   gift jsonb,
   song jsonb,
   her_photos text[],
@@ -209,10 +222,14 @@ as $$
   select
     s.her_name,
     s.her_nickname,
+    s.her_country,
     s.him_name,
     s.him_nickname,
+    s.him_country,
     case when s.unlock_at is not null and now() < s.unlock_at then '' else s.letter end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.questions end,
+    case when s.unlock_at is not null and now() < s.unlock_at then 'auto' else s.know_me_mode end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '[]'::jsonb else s.know_me_quiz end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::jsonb else s.gift end,
     case when s.unlock_at is not null and now() < s.unlock_at then null else s.song end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.her_photos end,

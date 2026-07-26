@@ -409,6 +409,41 @@
   margin-top: 14px;
 }
 
+.know-me-builder__question {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #e3f0ee;
+  border-radius: 14px;
+}
+
+.know-me-builder__question .letter-templates-btn {
+  margin-top: 10px;
+}
+
+.know-me-builder__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.know-me-builder__option input[type='radio'] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: #1f3d3a;
+}
+
+.know-me-builder__option .letter-textarea {
+  margin-top: 0;
+  flex: 1;
+}
+
+.know-me-builder__option .photo-grid__remove {
+  position: static;
+  flex-shrink: 0;
+}
+
 .places-section {
   width: 100%;
   max-width: 880px;
