@@ -36,6 +36,13 @@ const MIXED_TIER_AMOUNT = 620;
 // in Deno, not the Vite bundle.
 const SUPER_TIER_SONG_IDS = ["chai-ya-saa-kumi", "slowly", "beta", "coming-home"];
 
+// Founder/testing accounts -- skip Paystack entirely and grant whatever tier
+// they ask for at KSh 0. Kept in sync with FREE_ACCESS_EMAILS in
+// src/lib/payments.ts. Safe to keep server-side even though the client also
+// knows this list: the caller's email still has to come from their own
+// signed-in session below, never from anything the client claims.
+const FREE_ACCESS_EMAILS = ["hezronsande2@gmail.com"];
+
 // Re-derives the same minimum tier + price that TierPaywall.tsx's
 // computePricing() shows him client-side, straight from what's actually
 // saved on the row -- so paying for a cheaper tier than the surprise's real
@@ -87,11 +94,6 @@ serve(async (req) => {
     }
     if (!TIERS[tier]) {
       return jsonResponse({ error: "Unknown tier." }, 400);
-    }
-
-    const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
-    if (!paystackSecretKey) {
-      return jsonResponse({ error: "PAYSTACK_SECRET_KEY is not configured." }, 500);
     }
 
     // Identify the caller from their own session token — never trust a
@@ -146,38 +148,55 @@ serve(async (req) => {
     }
     const expectedAmount = tier === pricing.requiredTier ? pricing.amount : TIERS[tier];
 
-    const verifyResponse = await fetch(
-      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-      { headers: { Authorization: `Bearer ${paystackSecretKey}` } },
-    );
-    const verifyBody = await verifyResponse.json();
+    const isFreeAccess = Boolean(user.email && FREE_ACCESS_EMAILS.includes(user.email.toLowerCase()));
 
-    if (!verifyResponse.ok) {
-      console.error(
-        "Paystack verify HTTP error",
-        verifyResponse.status,
-        JSON.stringify(verifyBody),
+    let finalAmount = expectedAmount;
+    let paystackReference = reference;
+
+    if (isFreeAccess) {
+      // No charge, no Paystack call at all -- the reference prefix keeps
+      // these visibly distinct from real transactions in surprise_payments.
+      finalAmount = 0;
+      paystackReference = `FREE_ACCESS_${reference}`;
+    } else {
+      const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
+      if (!paystackSecretKey) {
+        return jsonResponse({ error: "PAYSTACK_SECRET_KEY is not configured." }, 500);
+      }
+
+      const verifyResponse = await fetch(
+        `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+        { headers: { Authorization: `Bearer ${paystackSecretKey}` } },
       );
-      return jsonResponse({ error: "Payment could not be verified." }, 402);
-    }
+      const verifyBody = await verifyResponse.json();
 
-    const paidSuccessfully =
-      verifyBody?.status === true &&
-      verifyBody?.data?.status === "success" &&
-      verifyBody?.data?.amount === expectedAmount * 100;
+      if (!verifyResponse.ok) {
+        console.error(
+          "Paystack verify HTTP error",
+          verifyResponse.status,
+          JSON.stringify(verifyBody),
+        );
+        return jsonResponse({ error: "Payment could not be verified." }, 402);
+      }
 
-    if (!paidSuccessfully) {
-      console.error("Paystack verify rejected", {
-        tier,
-        reference,
-        expectedAmount,
-        paystackStatus: verifyBody?.status,
-        transactionStatus: verifyBody?.data?.status,
-        transactionAmount: verifyBody?.data?.amount,
-        gatewayResponse: verifyBody?.data?.gateway_response,
-        message: verifyBody?.message,
-      });
-      return jsonResponse({ error: "Payment could not be verified." }, 402);
+      const paidSuccessfully =
+        verifyBody?.status === true &&
+        verifyBody?.data?.status === "success" &&
+        verifyBody?.data?.amount === expectedAmount * 100;
+
+      if (!paidSuccessfully) {
+        console.error("Paystack verify rejected", {
+          tier,
+          reference,
+          expectedAmount,
+          paystackStatus: verifyBody?.status,
+          transactionStatus: verifyBody?.data?.status,
+          transactionAmount: verifyBody?.data?.amount,
+          gatewayResponse: verifyBody?.data?.gateway_response,
+          message: verifyBody?.message,
+        });
+        return jsonResponse({ error: "Payment could not be verified." }, 402);
+      }
     }
 
     // paystack_reference is unique on surprise_payments — a reused reference
@@ -189,8 +208,8 @@ serve(async (req) => {
         surprise_id: surpriseId,
         user_id: user.id,
         tier,
-        amount: expectedAmount,
-        paystack_reference: reference,
+        amount: finalAmount,
+        paystack_reference: paystackReference,
       })
       .select()
       .single();
@@ -209,25 +228,25 @@ serve(async (req) => {
           <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
             <h1 style="color:#241f27;">You're all set</h1>
             <p style="color:#3d3540; line-height:1.6;">
-              Your payment for the <strong>${tier}</strong> tier (KSh ${expectedAmount}) on
+              Your payment for the <strong>${tier}</strong> tier (KSh ${finalAmount}) on
               ${herName}'s surprise is confirmed. Her link is live now.
             </p>
-            <p style="color:#8a8290; font-size:13px;">Reference: ${reference}</p>
+            <p style="color:#8a8290; font-size:13px;">Reference: ${paystackReference}</p>
           </div>
         `,
       });
     }
 
     await sendAdminEmail({
-      subject: `New payment — ${tier} (KSh ${expectedAmount})`,
+      subject: `New payment — ${tier} (KSh ${finalAmount})`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
           <h1 style="color:#241f27;">New payment received</h1>
           <p style="color:#3d3540; line-height:1.6;">
-            <strong>${tier}</strong> tier — KSh ${expectedAmount}<br/>
+            <strong>${tier}</strong> tier — KSh ${finalAmount}${isFreeAccess ? " (free access)" : ""}<br/>
             Surprise for: ${herName}<br/>
             Paid by: ${user.email ?? user.id}<br/>
-            Reference: ${reference}
+            Reference: ${paystackReference}
           </p>
         </div>
       `,

@@ -3,6 +3,16 @@ import { resolveLibrarySong, type SongChoice } from '../features/surprise/songs'
 
 export type Tier = 'basic' | 'super' | 'premium'
 
+// Accounts that skip Paystack entirely and get whatever tier they pick for
+// free (see TierPaywall.tsx) -- founder/testing accounts only. Visible in the
+// shipped bundle either way (client code always is), but that's not the
+// actual security boundary: verify-surprise-payment.ts derives the caller's
+// identity from their own signed-in session server-side, so this only ever
+// helps someone who can already sign in as one of these exact addresses.
+// Kept in sync with FREE_ACCESS_EMAILS in
+// supabase/functions/verify-surprise-payment/index.ts.
+export const FREE_ACCESS_EMAILS = ['hezronsande2@gmail.com']
+
 export type TierConfig = {
   id: Tier
   name: string

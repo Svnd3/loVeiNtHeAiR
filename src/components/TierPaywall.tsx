@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import {
   TIERS,
   TIER_RANK,
+  FREE_ACCESS_EMAILS,
   generatePaymentReference,
   verifySurprisePayment,
   type PricingResult,
@@ -59,11 +60,37 @@ export default function TierPaywall({
   const amountFor = (tier: (typeof TIERS)[number]) =>
     tier.id === pricing.requiredTier ? pricing.amount : tier.amount
 
+  const isFreeAccess = FREE_ACCESS_EMAILS.includes(userEmail.toLowerCase())
+
+  const confirmPayment = (reference: string, tier: Tier) => {
+    confirmingRef.current = true
+    setStage('confirming')
+    verifySurprisePayment({ reference, tier, surpriseId, accessToken })
+      .then((payment) => {
+        confirmingRef.current = false
+        setStage('idle')
+        onSuccess(payment.tier)
+      })
+      .catch((error: Error) => {
+        confirmingRef.current = false
+        setStage('error')
+        setErrorMessage(error.message || "We couldn't confirm this payment. Please try again.")
+      })
+  }
+
   const handlePickTier = (tier: (typeof TIERS)[number]) => {
     if (stage === 'confirming') return
     if (TIER_RANK[tier.id] < TIER_RANK[pricing.requiredTier]) return
     setSelectedTierId(tier.id)
     setErrorMessage('')
+
+    // Founder/testing accounts (see FREE_ACCESS_EMAILS) skip Paystack
+    // entirely -- verify-surprise-payment recognizes the same address
+    // server-side and grants the tier without ever checking a reference.
+    if (isFreeAccess) {
+      confirmPayment(generatePaymentReference(tier.id), tier.id)
+      return
+    }
 
     if (!window.PaystackPop) {
       setErrorMessage('Payment is unavailable right now. Please try again shortly.')
@@ -81,19 +108,7 @@ export default function TierPaywall({
       ref: reference,
       label: `loveintheair — ${tier.name}`,
       callback: (response) => {
-        confirmingRef.current = true
-        setStage('confirming')
-        verifySurprisePayment({ reference: response.reference, tier: tier.id, surpriseId, accessToken })
-          .then((payment) => {
-            confirmingRef.current = false
-            setStage('idle')
-            onSuccess(payment.tier)
-          })
-          .catch((error: Error) => {
-            confirmingRef.current = false
-            setStage('error')
-            setErrorMessage(error.message || "We couldn't confirm this payment. Please try again.")
-          })
+        confirmPayment(response.reference, tier.id)
       },
       onClose: () => {
         if (!confirmingRef.current) setSelectedTierId(null)
