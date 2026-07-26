@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext'
 import { compressImageToBlob } from '../lib/image'
 import { SONG_LIBRARY, type SongChoice } from '../features/surprise/songs'
 import TierPaywall from '../components/TierPaywall'
+import { computePricing } from '../lib/payments'
 import { sendSurpriseCreatedEmail } from '../lib/notifications'
 import './Details.css'
 
@@ -230,6 +231,67 @@ function PlacesSection({
         hidden
         onChange={addPhotos}
       />
+    </div>
+  )
+}
+
+const MAX_QUESTIONS = 10
+
+function QuestionSection({
+  questions,
+  onChange,
+}: {
+  questions: string[]
+  onChange: (next: string[]) => void
+}) {
+  const updateAt = (index: number, value: string) => {
+    onChange(questions.map((q, i) => (i === index ? value : q)))
+  }
+
+  const removeAt = (index: number) => {
+    onChange(questions.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="letter-section">
+      <h2 className="profile-section__title">
+        Ask her your own question <TierBadge tier="super" />
+      </h2>
+      <p className="profile-section__hint">
+        Replaces "Do you believe in love?" as the yes/no she has to get past before it opens. Super
+        gets one question, Premium can add as many as you want — leave blank to keep the default.
+      </p>
+
+      {questions.map((question, index) => (
+        <div className="memory-entry" key={index}>
+          <input
+            className="letter-textarea"
+            type="text"
+            placeholder='e.g. "Will you be my girlfriend?"'
+            value={question}
+            onChange={(event) => updateAt(index, event.target.value)}
+            maxLength={120}
+          />
+          <button
+            type="button"
+            className="photo-grid__remove memory-entry__remove"
+            onClick={() => removeAt(index)}
+            aria-label="Remove question"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+
+      {questions.length < MAX_QUESTIONS && (
+        <button
+          type="button"
+          className="letter-templates-btn"
+          onClick={() => onChange([...questions, ''])}
+        >
+          + Add a question
+        </button>
+      )}
     </div>
   )
 }
@@ -887,7 +949,7 @@ function Details() {
   const [her, setHer] = useState<Profile>(emptyProfile)
   const [him, setHim] = useState<Profile>(emptyProfile)
   const [letter, setLetter] = useState('')
-  const [question, setQuestion] = useState('')
+  const [questions, setQuestions] = useState<string[]>([])
   const [memories, setMemories] = useState<string[]>([])
   const [places, setPlaces] = useState<PhotoItem[]>([])
   const [gift, setGift] = useState<GiftDraft>(emptyGift)
@@ -943,7 +1005,7 @@ function Details() {
           ),
         })
         setLetter(data.letter ?? '')
-        setQuestion(data.question ?? '')
+        setQuestions((data.questions as string[]) ?? [])
         setMemories((data.memories as string[]) ?? [])
         setPlaces(
           zipPhotos(
@@ -1193,7 +1255,7 @@ function Details() {
         him_nickname: him.nickname.trim(),
         him_country: him.country.trim(),
         letter: letter.trim(),
-        question: question.trim(),
+        questions: questions.map((q) => q.trim()).filter(Boolean),
         memories: memories.map((m) => m.trim()).filter(Boolean),
         song: song.type === 'library' ? song : null,
         unlock_at: unlockAt ? new Date(unlockAt).toISOString() : null,
@@ -1232,7 +1294,6 @@ function Details() {
           places_photos_compressed: [],
         })
         if (insertError) throw insertError
-        sendSurpriseCreatedEmail(id, session!.access_token)
       }
 
       setSurpriseId(id)
@@ -1269,12 +1330,23 @@ function Details() {
   }
 
   if (showPaywall && surpriseId && session) {
+    const pricing = computePricing({
+      song,
+      hasGiftAttachment: Boolean(gift.attachment),
+      questionCount: questions.map((q) => q.trim()).filter(Boolean).length,
+    })
     return (
       <TierPaywall
         surpriseId={surpriseId}
         userEmail={session.user.email ?? ''}
         accessToken={session.access_token}
+        pricing={pricing}
         onSuccess={() => {
+          // Only now — payment actually confirmed — does he get the "her link
+          // is ready" email. Sending it any earlier (e.g. right after the
+          // insert) would hand him a link that doesn't even work yet, since
+          // get_surprise() requires a surprise_payments row to exist at all.
+          sendSurpriseCreatedEmail(surpriseId, session.access_token)
           setShowPaywall(false)
           setDone(true)
         }}
@@ -1426,23 +1498,7 @@ function Details() {
         />
       </div>
 
-      <div className="letter-section">
-        <h2 className="profile-section__title">
-          Ask her your own question <TierBadge tier="super" />
-        </h2>
-        <p className="profile-section__hint">
-          Replaces "Do you believe in love?" as the yes/no she has to get past before it opens.
-          Leave blank to keep the default — Basic always uses the default either way.
-        </p>
-        <input
-          className="letter-textarea"
-          type="text"
-          placeholder='e.g. "Will you be my girlfriend?"'
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          maxLength={120}
-        />
-      </div>
+      <QuestionSection questions={questions} onChange={setQuestions} />
 
       <MemorySection memories={memories} onChange={setMemories} />
 

@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react'
-import { TIERS, generatePaymentReference, verifySurprisePayment, type Tier } from '../lib/payments'
+import {
+  TIERS,
+  TIER_RANK,
+  generatePaymentReference,
+  verifySurprisePayment,
+  type PricingResult,
+  type Tier,
+} from '../lib/payments'
 import './TierPaywall.css'
 
 declare global {
@@ -27,12 +34,17 @@ export default function TierPaywall({
   surpriseId,
   userEmail,
   accessToken,
+  pricing,
   onSuccess,
   onClose,
 }: {
   surpriseId: string
   userEmail: string
   accessToken: string
+  // What he actually filled in requires at least `pricing.requiredTier` —
+  // any tier ranked below that gets disabled below rather than sold for a
+  // price that wouldn't actually show everything he added.
+  pricing: PricingResult
   onSuccess: (tier: Tier) => void
   onClose?: () => void
 }) {
@@ -41,8 +53,15 @@ export default function TierPaywall({
   const [errorMessage, setErrorMessage] = useState('')
   const confirmingRef = useRef(false)
 
+  // Only the exact required tier can carry the mixed-pricing discount —
+  // choosing to pay for something ranked above the minimum is a voluntary
+  // upgrade and always costs that tier's normal listed price.
+  const amountFor = (tier: (typeof TIERS)[number]) =>
+    tier.id === pricing.requiredTier ? pricing.amount : tier.amount
+
   const handlePickTier = (tier: (typeof TIERS)[number]) => {
     if (stage === 'confirming') return
+    if (TIER_RANK[tier.id] < TIER_RANK[pricing.requiredTier]) return
     setSelectedTierId(tier.id)
     setErrorMessage('')
 
@@ -56,7 +75,7 @@ export default function TierPaywall({
     const handler = window.PaystackPop.setup({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: userEmail || 'creator@loveintheair.app',
-      amount: tier.amount * 100,
+      amount: amountFor(tier) * 100,
       currency: 'KES',
       channels: ['mobile_money', 'card'],
       ref: reference,
@@ -94,6 +113,12 @@ export default function TierPaywall({
             <p className="tier-paywall__subtitle">
               Everything you just filled in is saved. Choose a tier to get her link.
             </p>
+            {pricing.requiredTier !== 'basic' && (
+              <p className="tier-paywall__subtitle">
+                What you added needs at least <strong>{TIERS.find((t) => t.id === pricing.requiredTier)?.name}</strong> to
+                show — go back and remove the extra song/questions/attachment if you want a cheaper tier instead.
+              </p>
+            )}
           </div>
           {onClose && (
             <button
@@ -109,26 +134,35 @@ export default function TierPaywall({
         </div>
 
         <div className="tier-paywall__tiers">
-          {TIERS.map((tier) => (
-            <button
-              key={tier.id}
-              type="button"
-              onClick={() => handlePickTier(tier)}
-              disabled={stage === 'confirming'}
-              className={`tier-paywall__tier ${selectedTierId === tier.id ? 'tier-paywall__tier--selected' : ''}`}
-            >
-              <div className="tier-paywall__tier-head">
-                <span className="tier-paywall__tier-name">{tier.name}</span>
-                <span className="tier-paywall__tier-amount">KSh {tier.amount}</span>
-              </div>
-              <p className="tier-paywall__tier-tagline">{tier.tagline}</p>
-              <ul className="tier-paywall__tier-features">
-                {tier.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
-                ))}
-              </ul>
-            </button>
-          ))}
+          {TIERS.map((tier) => {
+            const locked = TIER_RANK[tier.id] < TIER_RANK[pricing.requiredTier]
+            return (
+              <button
+                key={tier.id}
+                type="button"
+                onClick={() => handlePickTier(tier)}
+                disabled={stage === 'confirming' || locked}
+                aria-disabled={locked}
+                className={`tier-paywall__tier ${selectedTierId === tier.id ? 'tier-paywall__tier--selected' : ''} ${locked ? 'tier-paywall__tier--locked' : ''}`}
+              >
+                <div className="tier-paywall__tier-head">
+                  <span className="tier-paywall__tier-name">{tier.name}</span>
+                  <span className="tier-paywall__tier-amount">KSh {amountFor(tier)}</span>
+                </div>
+                <p className="tier-paywall__tier-tagline">{tier.tagline}</p>
+                <ul className="tier-paywall__tier-features">
+                  {tier.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                {locked && (
+                  <p className="tier-paywall__tier-locked-note">
+                    Needs what you added — pick {TIERS.find((t) => t.id === pricing.requiredTier)?.name} instead
+                  </p>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {stage === 'confirming' && (

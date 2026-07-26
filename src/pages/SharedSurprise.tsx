@@ -19,7 +19,7 @@ type FetchedSurprise = {
   him_name: string
   him_nickname: string
   letter: string
-  question: string
+  questions: string[]
   gift: SurpriseGift
   song: SongChoice | null
   her_photos: string[]
@@ -173,9 +173,15 @@ function SharedSurprise() {
   const songForTier = isSongAllowedForTier(data.song, data.tier) ? data.song ?? undefined : undefined
 
   // A custom gate question is Super/Premium-only — Basic always gets the
-  // default "Do you believe in love?" even if he wrote one (same
-  // fill-in-anything-but-gate-at-display pattern as songForTier/giftForTier).
-  const questionForTier = data.tier !== 'basic' && data.question ? data.question : undefined
+  // default "Do you believe in love?" even if he wrote some. Super is capped
+  // at just the first one even if he wrote several; Premium gets all of them
+  // (same fill-in-anything-but-gate-at-display pattern as songForTier/giftForTier).
+  const questionsForTier =
+    data.tier === 'basic'
+      ? undefined
+      : data.tier === 'super'
+        ? data.questions.slice(0, 1)
+        : data.questions
 
   // The gift attachment (ticket/reservation/document) is a Premium-only
   // reveal — strip it for Basic/Super even if he uploaded one. The gift photo
@@ -200,7 +206,7 @@ function SharedSurprise() {
       />
 
       {!believed && (
-        <LoveQuiz herName={herName} question={questionForTier} onBelieve={() => setBelieved(true)} />
+        <LoveQuiz herName={herName} questions={questionsForTier} onBelieve={() => setBelieved(true)} />
       )}
       {believed && (
         <>

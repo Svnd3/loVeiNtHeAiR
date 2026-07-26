@@ -23,6 +23,47 @@ const TIERS: Record<string, number> = {
   premium: 759,
 };
 
+const TIER_RANK: Record<string, number> = { basic: 0, super: 1, premium: 2 };
+
+// 620 instead of the normal 759 -- charged only when the surprise needs
+// Premium purely because it mixes a Super-only extra with a Premium-only one
+// at once, not because he used Premium's own big extras (own song upload,
+// gift attachment). Kept in sync with MIXED_TIER_AMOUNT in src/lib/payments.ts.
+const MIXED_TIER_AMOUNT = 620;
+
+// Mirrors the `tier: 'super'` entries in src/features/surprise/songs.ts --
+// duplicated here (small, stable list) rather than imported since this runs
+// in Deno, not the Vite bundle.
+const SUPER_TIER_SONG_IDS = ["chai-ya-saa-kumi", "slowly", "beta", "coming-home"];
+
+// Re-derives the same minimum tier + price that TierPaywall.tsx's
+// computePricing() shows him client-side, straight from what's actually
+// saved on the row -- so paying for a cheaper tier than the surprise's real
+// content needs is rejected here regardless of what the client claims.
+function computeRequiredPricing(surprise: {
+  song: { type?: string; id?: string } | null;
+  gift: { attachment?: string } | null;
+  questions: string[] | null;
+}) {
+  const questionCount = (surprise.questions ?? []).filter((q) => q.trim()).length;
+  const usesSuperOnlyFeature =
+    (surprise.song?.type === "library" && SUPER_TIER_SONG_IDS.includes(surprise.song.id ?? "")) ||
+    questionCount === 1;
+  const usesPremiumOnlyFeature =
+    surprise.song?.type === "upload" || Boolean(surprise.gift?.attachment) || questionCount >= 2;
+
+  if (usesPremiumOnlyFeature && usesSuperOnlyFeature) {
+    return { requiredTier: "premium", amount: MIXED_TIER_AMOUNT, mixed: true };
+  }
+  if (usesPremiumOnlyFeature) {
+    return { requiredTier: "premium", amount: TIERS.premium, mixed: false };
+  }
+  if (usesSuperOnlyFeature) {
+    return { requiredTier: "super", amount: TIERS.super, mixed: false };
+  }
+  return { requiredTier: "basic", amount: TIERS.basic, mixed: false };
+}
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -44,8 +85,7 @@ serve(async (req) => {
     if (!surpriseId || typeof surpriseId !== "string") {
       return jsonResponse({ error: "Missing surprise id." }, 400);
     }
-    const expectedAmount = TIERS[tier];
-    if (!expectedAmount) {
+    if (!TIERS[tier]) {
       return jsonResponse({ error: "Unknown tier." }, 400);
     }
 
@@ -82,7 +122,7 @@ serve(async (req) => {
     // someone else's surprise (or grief them by burning their reference).
     const { data: surprise, error: ownershipError } = await adminClient
       .from("surprises")
-      .select("id, her_name, her_nickname")
+      .select("id, her_name, her_nickname, song, gift, questions")
       .eq("id", surpriseId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -90,6 +130,21 @@ serve(async (req) => {
     if (ownershipError || !surprise) {
       return jsonResponse({ error: "Surprise not found." }, 404);
     }
+
+    // What he's actually saved may need a higher tier than the one he's
+    // trying to pay for (or qualify for the mixed 620 instead of the flat
+    // tier price) -- re-derived here from the row itself, never trusted from
+    // the client, same reasoning as the ownership check above.
+    const pricing = computeRequiredPricing(surprise);
+    if (TIER_RANK[tier] < TIER_RANK[pricing.requiredTier]) {
+      return jsonResponse(
+        {
+          error: `What you added needs at least the ${pricing.requiredTier} tier — remove the extra song/questions/attachment if you want a cheaper one.`,
+        },
+        400,
+      );
+    }
+    const expectedAmount = tier === pricing.requiredTier ? pricing.amount : TIERS[tier];
 
     const verifyResponse = await fetch(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,

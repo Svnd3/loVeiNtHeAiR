@@ -4,6 +4,8 @@ import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { useSmartBack } from '../lib/useSmartBack'
 import TierPaywall from '../components/TierPaywall'
+import { computePricing } from '../lib/payments'
+import type { SongChoice } from '../features/surprise/songs'
 import './Account.css'
 
 type SurpriseSummary = {
@@ -14,6 +16,9 @@ type SurpriseSummary = {
   viewCount: number
   firstViewedAt: string | null
   unlockAt: string | null
+  song: SongChoice | null
+  hasGiftAttachment: boolean
+  questionCount: number
 }
 
 function statusLabel(surprise: SurpriseSummary) {
@@ -52,7 +57,7 @@ function Account() {
     Promise.all([
       supabase
         .from('surprises')
-        .select('id, her_name, created_at, view_count, first_viewed_at, unlock_at')
+        .select('id, her_name, created_at, view_count, first_viewed_at, unlock_at, song, gift, questions')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
       supabase.from('surprise_payments').select('surprise_id').eq('user_id', userId),
@@ -71,6 +76,9 @@ function Account() {
             viewCount: (row.view_count as number) ?? 0,
             firstViewedAt: (row.first_viewed_at as string | null) ?? null,
             unlockAt: (row.unlock_at as string | null) ?? null,
+            song: (row.song as SongChoice | null) ?? null,
+            hasGiftAttachment: Boolean((row.gift as { attachment?: string } | null)?.attachment),
+            questionCount: ((row.questions as string[] | null) ?? []).length,
           })),
         )
       }
@@ -268,6 +276,9 @@ function Account() {
           surpriseId={payingSurpriseId}
           userEmail={session.user.email ?? ''}
           accessToken={session.access_token}
+          pricing={computePricing(
+            surprises.find((s) => s.id === payingSurpriseId) ?? { song: null, hasGiftAttachment: false, questionCount: 0 },
+          )}
           onSuccess={() => {
             setSurprises((prev) =>
               prev.map((s) => (s.id === payingSurpriseId ? { ...s, paid: true } : s)),

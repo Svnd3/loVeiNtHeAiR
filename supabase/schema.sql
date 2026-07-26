@@ -44,10 +44,12 @@ alter table surprises add column if not exists places_photos text[] not null def
 alter table surprises add column if not exists her_photos_compressed text[] not null default '{}';
 alter table surprises add column if not exists him_photos_compressed text[] not null default '{}';
 alter table surprises add column if not exists places_photos_compressed text[] not null default '{}';
--- question: Super/Premium can replace the fixed "Do you believe in love?"
--- gate question (see LoveQuiz.tsx) with their own. Empty string (the
--- default) means "use the built-in question" -- see get_surprise() below.
-alter table surprises add column if not exists question text not null default '';
+-- questions: replaces the fixed "Do you believe in love?" gate question (see
+-- LoveQuiz.tsx) with his own -- Super gets exactly one, Premium gets as many
+-- as he writes (SharedSurprise.tsx enforces the Super cap at display time).
+-- Empty array (the default) means "use the built-in question".
+alter table surprises drop column if exists question;
+alter table surprises add column if not exists questions text[] not null default '{}';
 -- unlock_at: leave a surprise's link "not yet unlocked" until this moment, even
 -- though the link itself already works (Paystack verified, get_surprise() finds
 -- the row) -- see get_surprise() below for how it blanks out the actual content
@@ -147,7 +149,7 @@ returns table (
   him_name text,
   him_nickname text,
   letter text,
-  question text,
+  questions text[],
   gift jsonb,
   song jsonb,
   her_photos text[],
@@ -172,7 +174,7 @@ as $$
     s.him_name,
     s.him_nickname,
     case when s.unlock_at is not null and now() < s.unlock_at then '' else s.letter end,
-    case when s.unlock_at is not null and now() < s.unlock_at then '' else s.question end,
+    case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.questions end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::jsonb else s.gift end,
     case when s.unlock_at is not null and now() < s.unlock_at then null else s.song end,
     case when s.unlock_at is not null and now() < s.unlock_at then '{}'::text[] else s.her_photos end,

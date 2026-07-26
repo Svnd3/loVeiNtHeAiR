@@ -95,6 +95,22 @@
   background: #eef8f7;
 }
 
+.tier-paywall__tier--locked {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.tier-paywall__tier--locked:hover {
+  border-color: #cfe3e1;
+  background: #f7fcfb;
+}
+
+.tier-paywall__tier-locked-note {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #a13d3d;
+}
+
 .tier-paywall__tier-head {
   display: flex;
   align-items: baseline;
