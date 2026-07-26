@@ -108,7 +108,7 @@ export function useProfile(): SurpriseProfile {
 
     if (!stored) {
       return {
-        herName: 'you',
+        herName: 'Abbie',
         himName: 'me',
         photos: PLACEHOLDER_PHOTOS,
         himPhotos: PLACEHOLDER_PHOTOS,
