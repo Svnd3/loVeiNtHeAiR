@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import LoveQuiz from './LoveQuiz'
 import KnowMeQuiz from './KnowMeQuiz'
 import AudioPlayer from './AudioPlayer'
-import LyricsBackdrop from './LyricsBackdrop'
 import ScrollStory from './ScrollStory'
 import { useProfile } from './useProfile'
 import { generateAutoQuestions } from './knowMeQuiz'
@@ -17,7 +16,6 @@ const DEMO_GATE_QUESTIONS = ['Do you believe in love?', 'Will you sing along?']
 function Surprise() {
   const [believed, setBelieved] = useState(false)
   const [knowMeDone, setKnowMeDone] = useState(false)
-  const [audioTime, setAudioTime] = useState({ currentTime: 0, duration: 0 })
   const profile = useProfile()
   const navigate = useNavigate()
   const { session } = useAuth()
@@ -45,11 +43,7 @@ function Surprise() {
       {/* Mounted immediately (not gated on `believed`) so the song is already
           buffering in the background by the time she reaches the reveal --
           `active` is what actually controls whether it plays/shows its widget. */}
-      <AudioPlayer
-        song={profile.song}
-        active={believed}
-        onTimeUpdate={(currentTime, duration) => setAudioTime({ currentTime, duration })}
-      />
+      <AudioPlayer song={profile.song} active={believed} />
 
       {!believed && (
         <LoveQuiz
@@ -67,11 +61,7 @@ function Surprise() {
       )}
       {believed && knowMeDone && (
         <>
-          <LyricsBackdrop
-            song={profile.song}
-            currentTime={audioTime.currentTime}
-            duration={audioTime.duration}
-          />
+          {/* Lyrics backdrop disabled for this preview for now. */}
           <ScrollStory
             herName={profile.herName}
             himName={profile.himName}

@@ -318,6 +318,21 @@ export const TIMED_LYRICS: Record<string, TimedLine[]> = {
     { time: 180.53, text: 'Tararara' },
     { time: 183.77, text: 'Nishaona mbali, you are the one I\'m gonna marry' },
   ],
+  // Sparse anchor points rather than a full transcription — enough for the
+  // on-screen backdrop to feel synced without reproducing the whole song.
+  // Timestamps are lrclib.net's synced data shifted -1.62s to match this
+  // recording's actual vocal entry (confirmed at 20s, not lrclib's 21.62s).
+  // The first anchor is pinned to 0 (not 20) on purpose: playback already
+  // starts at the 20s mark (see startAt in songs.ts), so currentTime is
+  // already ~20 from the very first frame -- anchoring here at exactly 20
+  // left it briefly unmatched whenever currentTime's first reported value
+  // came in a hair under that due to seek/rounding, showing nothing until
+  // it ticked past. 0 is always already "in the past" by then.
+  'chikwere': [
+    { time: 0, text: 'Hey, love' },
+    { time: 78.3, text: 'It\'s now or never, my love' },
+    { time: 165.7, text: 'It\'s now or never, my love' },
+  ],
   'beta': [
     { time: 21.21, text: 'It\'s been a really long time tangu nikuvutie' },
     { time: 25.77, text: 'I only called today' },

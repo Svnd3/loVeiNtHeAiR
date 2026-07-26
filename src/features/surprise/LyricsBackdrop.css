@@ -78,3 +78,50 @@
     display: none;
   }
 }
+
+/* Background pass used behind KnowMeQuiz (see SharedSurprise.tsx) -- purely
+   decorative, so it's kept low-key and never competes with the quiz itself. */
+.lyrics-backdrop--ticker {
+  z-index: 0;
+  align-items: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.lyrics-ticker {
+  height: 100%;
+  width: 100%;
+  max-width: min(720px, 90vw);
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent, #000 15%, #000 85%, transparent);
+}
+
+.lyrics-ticker__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 40px 0;
+  animation: lyrics-ticker-scroll 48s linear infinite;
+}
+
+.lyrics-ticker__line {
+  font-family: 'Achiko', 'Playfair Display', 'Caveat', serif;
+  font-size: clamp(1.2rem, 3.6vw, 1.8rem);
+  text-align: center;
+  color: #1f3d3a;
+  opacity: 0.16;
+  text-wrap: balance;
+}
+
+/* Two identical copies stacked back to back, scrolled up by exactly one
+   copy's height -- since both copies are the same height, the loop point is
+   seamless with no measuring/JS needed. */
+@keyframes lyrics-ticker-scroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}

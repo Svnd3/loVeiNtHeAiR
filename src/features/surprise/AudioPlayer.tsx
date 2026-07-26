@@ -74,11 +74,21 @@ function AudioPlayer({
   // Actually starts playback once `active` flips true -- deliberately a
   // separate effect from the one above so becoming active never re-triggers
   // audio.load() and throws away whatever had already buffered.
+  //
+  // Re-applies startAt right before play() as a safety net: the seek from
+  // the buffering effect above happens on 'loadedmetadata', often long
+  // before `active` flips true (e.g. while she's still on the dodge-quiz
+  // screen) -- browsers don't reliably hold a seek made before enough data
+  // was buffered at that position, so without this, play() can silently
+  // resume from 0 instead, throwing lyric sync off by however long the
+  // skipped intro was.
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !active) return
+    const startAt = song?.type === 'library' ? resolveLibrarySong(song)?.startAt : undefined
+    if (startAt && Math.abs(audio.currentTime - startAt) > 1) audio.currentTime = startAt
     audio.play().catch(() => {})
-  }, [active, src])
+  }, [active, src, song])
 
   useEffect(() => {
     const interval = setInterval(() => {

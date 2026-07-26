@@ -11,6 +11,18 @@ const COLOR_INTERVAL_MS = 1800
 
 type Stage = 'title' | 'title-fade' | 'countdown' | 'question'
 
+// Lets the lyrics ticker (see SharedSurprise.tsx / LyricsBackdrop) show
+// faintly through the quiz's full-screen background, without touching
+// KNOW_ME_COLORS itself -- that same palette also colors the solid answer
+// buttons, which should stay fully opaque.
+function toBackdropTint(hex: string) {
+  const value = hex.replace('#', '')
+  const r = parseInt(value.slice(0, 2), 16)
+  const g = parseInt(value.slice(2, 4), 16)
+  const b = parseInt(value.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, 0.9)`
+}
+
 function useColorCycle(active: boolean) {
   const [index, setIndex] = useState(0)
   useEffect(() => {
@@ -120,7 +132,7 @@ function KnowMeQuiz({
 
   if (stage === 'countdown') {
     return (
-      <div className="know-me-quiz" style={{ background: color.bg, color: color.fg }}>
+      <div className="know-me-quiz" style={{ background: toBackdropTint(color.bg), color: color.fg }}>
         {herName && round === 0 && <p className="know-me-quiz__greeting">Hey, {herName}</p>}
         <p className="know-me-quiz__countdown" key={countdownValue}>
           {countdownValue}
@@ -130,26 +142,22 @@ function KnowMeQuiz({
   }
 
   return (
-    <div className="know-me-quiz" style={{ background: color.bg, color: color.fg }}>
+    <div className="know-me-quiz" style={{ background: toBackdropTint(color.bg), color: color.fg }}>
       <p className="know-me-quiz__progress">
         {round + 1} / {questions.length}
       </p>
       <h2 className="know-me-quiz__question">{currentQuestion.question}</h2>
       <div className="know-me-quiz__options">
         {currentQuestion.options.map((option, index) => {
-          const showResult = pickedIndex !== null
-          const isCorrect = index === currentQuestion.correctIndex
           const isPicked = pickedIndex === index
           const swatch = KNOW_ME_COLORS[index % KNOW_ME_COLORS.length]
           return (
             <button
               type="button"
               key={option}
-              className={[
-                'know-me-quiz__option',
-                showResult && isCorrect ? 'know-me-quiz__option--correct' : '',
-                showResult && isPicked && !isCorrect ? 'know-me-quiz__option--wrong' : '',
-              ]
+              // Deliberately doesn't reveal correctIndex here at all -- she
+              // picks an answer and it just moves on, no right/wrong tell.
+              className={['know-me-quiz__option', isPicked ? 'know-me-quiz__option--picked' : '']
                 .filter(Boolean)
                 .join(' ')}
               style={{ background: swatch.bg, color: swatch.fg }}

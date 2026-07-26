@@ -252,6 +252,19 @@ function SharedSurprise() {
         onTimeUpdate={(currentTime, duration) => setAudioTime({ currentTime, duration })}
       />
 
+      {/* Starts right alongside the audio (as soon as she's answered the love
+          quiz) rather than waiting for KnowMeQuiz to finish -- 'ticker' mode
+          during that quiz keeps it as a non-interactive background pass, then
+          it switches back to the normal reveal once ScrollStory begins. */}
+      {believed && (
+        <LyricsBackdrop
+          song={songForTier}
+          currentTime={audioTime.currentTime}
+          duration={audioTime.duration}
+          variant={showKnowMeQuiz && !knowMeDone ? 'ticker' : 'stack'}
+        />
+      )}
+
       {!believed && (
         <LoveQuiz herName={herName} questions={questionsForTier} onBelieve={() => setBelieved(true)} />
       )}
@@ -260,11 +273,6 @@ function SharedSurprise() {
       )}
       {believed && (!showKnowMeQuiz || knowMeDone) && (
         <>
-          <LyricsBackdrop
-            song={songForTier}
-            currentTime={audioTime.currentTime}
-            duration={audioTime.duration}
-          />
           <ScrollStory
             herName={herName}
             himName={himName}
