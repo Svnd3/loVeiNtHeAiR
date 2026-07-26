@@ -12,7 +12,7 @@ import './Surprise.css'
 
 // A couple of examples of the "ask her your own question" gate (Super+) so
 // the demo shows it off instead of just the default "Do you believe in love?".
-const DEMO_GATE_QUESTIONS = ['Do you believe in love?', 'Will you let me spoil you?']
+const DEMO_GATE_QUESTIONS = ['Do you believe in love?', 'Will you sing along?']
 
 function Surprise() {
   const [believed, setBelieved] = useState(false)
