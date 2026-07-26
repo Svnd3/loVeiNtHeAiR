@@ -91,11 +91,11 @@ function CurveGallery({
     )
 
     const textureLoader = new THREE.TextureLoader()
-    const textures = photos.map((src) => {
-      const texture = textureLoader.load(src)
-      texture.colorSpace = THREE.SRGBColorSpace
-      return texture
-    })
+    let textures: THREE.Texture[] = []
+    // width/height per photo -- used so each plane keeps its photo's real
+    // proportions instead of squashing every image into a square (which is
+    // what made portrait/landscape shots look stretched on the shared page).
+    let aspects: number[] = []
 
     const camProxy = { t: 0 }
     const setCamT = gsap.quickTo(camProxy, 't', { duration: 1, ease: 'power3.out' })
@@ -151,7 +151,26 @@ function CurveGallery({
     }
 
     async function init() {
-      const raw: number[][] = await fetch('/paths/path1.json').then((r) => r.json())
+      const [raw] = await Promise.all([
+        fetch('/paths/path1.json').then((r) => r.json()) as Promise<number[][]>,
+        Promise.all(
+          photos.map(
+            (src) =>
+              new Promise<THREE.Texture>((resolve) => {
+                textureLoader.load(src, (texture) => {
+                  texture.colorSpace = THREE.SRGBColorSpace
+                  resolve(texture)
+                })
+              }),
+          ),
+        ).then((loaded) => {
+          textures = loaded
+          aspects = loaded.map((t) => {
+            const img = t.image as HTMLImageElement | undefined
+            return img?.height ? img.width / img.height : 1
+          })
+        }),
+      ])
       if (cancelled) return
 
       curve = buildCurve(raw)
@@ -164,9 +183,15 @@ function CurveGallery({
         const depthOffset = randomBetween(...DEPTH_OFFSET_RANGE)
         const size = randomBetween(...SIZE_RANGE)
         const photoIndex = Math.floor(Math.random() * textures.length)
+        // Keep the photo's real proportions -- `size` sets its longest edge
+        // (still within SIZE_RANGE), the shorter edge follows the aspect ratio
+        // instead of both edges being forced equal.
+        const aspect = aspects[photoIndex] || 1
+        const planeWidth = aspect >= 1 ? size : size * aspect
+        const planeHeight = aspect >= 1 ? size / aspect : size
 
         const mesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(size, size),
+          new THREE.PlaneGeometry(planeWidth, planeHeight),
           new THREE.MeshBasicMaterial({ map: textures[photoIndex], side: THREE.DoubleSide }),
         )
         mesh.position.set(
