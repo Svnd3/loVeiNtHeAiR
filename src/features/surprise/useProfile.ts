@@ -68,7 +68,7 @@ like something you'd remember. Every photo in that gallery is a piece of
 Thank you for believing in this, even for a second.
 
 Yours,
-Me`
+Kevin`
 
 const PLACEHOLDER_MEMORIES: SurpriseMemory[] = [
   {
@@ -109,7 +109,7 @@ export function useProfile(): SurpriseProfile {
     if (!stored) {
       return {
         herName: 'Abbie',
-        himName: 'me',
+        himName: 'Kevin',
         photos: PLACEHOLDER_PHOTOS,
         himPhotos: PLACEHOLDER_PHOTOS,
         letter: PLACEHOLDER_LETTER,
