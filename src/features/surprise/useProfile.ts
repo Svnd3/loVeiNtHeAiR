@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
 import type { SongChoice } from './songs'
 
+// What plays on the unauthenticated "/surprise" demo preview (no real saved
+// profile in localStorage yet) -- picked as the one that should make the
+// best first impression, independent of whatever's in the real SONG_LIBRARY
+// order.
+const PLACEHOLDER_SONG: SongChoice = { type: 'library', id: 'chikwere' }
+
 const PROFILE_KEY = 'gfbf_profile'
 
 export type GiftType = 'date' | 'ticket' | 'other'
@@ -110,6 +116,7 @@ export function useProfile(): SurpriseProfile {
         memories: PLACEHOLDER_MEMORIES,
         placesPhotos: PLACEHOLDER_PHOTOS.slice(0, 3),
         gift: PLACEHOLDER_GIFT,
+        song: PLACEHOLDER_SONG,
         isPlaceholder: true,
       }
     }

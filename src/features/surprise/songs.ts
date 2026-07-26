@@ -22,6 +22,7 @@ export const SONG_LIBRARY: SongOption[] = [
   { id: 'isabella', artist: 'Sauti Sol', title: 'Isabella', src: '/audio/songs/sauti-sol-isabella.mp3', startAt: 42 },
   { id: 'wema', artist: 'nk_njoroge ft. Fedora', title: 'Wema', src: '/audio/songs/wema-nk-njoroge-fedora.mp3' },
   { id: 'mazuri-mabaya', artist: 'Ywaya Tajiri', title: 'Mazuri Mabaya', src: '/audio/songs/ywaya-tajiri-mazuri-mabaya.mp3' },
+  { id: 'chikwere', artist: 'Bien', title: 'Chikwere', src: '/audio/songs/bien-chikwere.mp3', startAt: 20 },
 ]
 
 export type SongChoice =
