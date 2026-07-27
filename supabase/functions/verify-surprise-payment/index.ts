@@ -18,27 +18,33 @@ const CORS_HEADERS = {
 // drives what the UI shows and what amount gets sent to Paystack -- this
 // copy is what actually enforces the price. "mixed" isn't one of the normal
 // always-offered tiers (see computeRequiredPricing below for when it applies)
-// but is a real value surprise_payments.tier accepts.
+// but is a real value surprise_payments.tier accepts. "custom" is the
+// always-offered bespoke tier -- never auto-selected by
+// computeRequiredPricing, only ever chosen voluntarily in TierPaywall, same
+// as any tier ranked above whatever the content actually requires.
 const TIERS: Record<string, number> = {
   basic: 499,
   super: 599,
   mixed: 620,
-  premium: 759,
+  premium: 649,
+  custom: 4999,
 };
 
-const TIER_RANK: Record<string, number> = { basic: 0, super: 1, mixed: 2, premium: 3 };
+const TIER_RANK: Record<string, number> = { basic: 0, super: 1, mixed: 2, premium: 3, custom: 4 };
 
 // Mirrors the `tier: 'super'` entries in src/features/surprise/songs.ts --
 // duplicated here (small, stable list) rather than imported since this runs
 // in Deno, not the Vite bundle.
 const SUPER_TIER_SONG_IDS = ["chai-ya-saa-kumi", "slowly", "beta", "coming-home"];
 
-// Founder/testing accounts -- skip Paystack entirely and grant whatever tier
-// they ask for at KSh 0. Kept in sync with FREE_ACCESS_EMAILS in
+// Founder/testing accounts -- skip Paystack entirely and always get the full
+// Premium experience (full-quality photos, no watermark, unlimited
+// questions, everything) at KSh 0, regardless of which tier card they
+// actually click. Kept in sync with FREE_ACCESS_EMAILS in
 // src/lib/payments.ts. Safe to keep server-side even though the client also
 // knows this list: the caller's email still has to come from their own
 // signed-in session below, never from anything the client claims.
-const FREE_ACCESS_EMAILS = ["hezronsande2@gmail.com"];
+const FREE_ACCESS_EMAILS = ["hezronsande2@gmail.com", "clivemuturi@gmail.com"];
 
 // Re-derives the same minimum tier + price that TierPaywall.tsx's
 // computePricing() shows him client-side, straight from what's actually
@@ -116,6 +122,12 @@ serve(async (req) => {
       return jsonResponse({ error: "Not signed in." }, 401);
     }
 
+    const isFreeAccess = Boolean(user.email && FREE_ACCESS_EMAILS.includes(user.email.toLowerCase()));
+    // Always Premium for free-access accounts -- whatever card he clicked in
+    // TierPaywall, there's no reason a free grant should ever leave him with
+    // compressed photos, a watermark, or a capped question count.
+    const effectiveTier = isFreeAccess ? "premium" : tier;
+
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL") as string,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string,
@@ -139,7 +151,7 @@ serve(async (req) => {
     // trying to pay for -- re-derived here from the row itself, never
     // trusted from the client, same reasoning as the ownership check above.
     const pricing = computeRequiredPricing(surprise);
-    if (TIER_RANK[tier] < TIER_RANK[pricing.requiredTier]) {
+    if (!isFreeAccess && TIER_RANK[effectiveTier] < TIER_RANK[pricing.requiredTier]) {
       return jsonResponse(
         {
           error: `What you added needs at least the ${pricing.requiredTier} tier — remove the extra song/questions/attachment if you want a cheaper one.`,
@@ -147,9 +159,8 @@ serve(async (req) => {
         400,
       );
     }
-    const expectedAmount = tier === pricing.requiredTier ? pricing.amount : TIERS[tier];
-
-    const isFreeAccess = Boolean(user.email && FREE_ACCESS_EMAILS.includes(user.email.toLowerCase()));
+    const expectedAmount =
+      effectiveTier === pricing.requiredTier ? pricing.amount : TIERS[effectiveTier];
 
     let finalAmount = expectedAmount;
     let paystackReference = reference;
@@ -208,7 +219,7 @@ serve(async (req) => {
       .insert({
         surprise_id: surpriseId,
         user_id: user.id,
-        tier,
+        tier: effectiveTier,
         amount: finalAmount,
         paystack_reference: paystackReference,
       })
@@ -224,12 +235,12 @@ serve(async (req) => {
     if (user.email) {
       await sendEmail({
         to: user.email,
-        subject: `Payment confirmed — ${tier} tier`,
+        subject: `Payment confirmed — ${effectiveTier} tier`,
         html: `
           <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
             <h1 style="color:#241f27;">You're all set</h1>
             <p style="color:#3d3540; line-height:1.6;">
-              Your payment for the <strong>${tier}</strong> tier (KSh ${finalAmount}) on
+              Your payment for the <strong>${effectiveTier}</strong> tier (KSh ${finalAmount}) on
               ${herName}'s surprise is confirmed. Her link is live now.
             </p>
             <p style="color:#8a8290; font-size:13px;">Reference: ${paystackReference}</p>
@@ -239,12 +250,12 @@ serve(async (req) => {
     }
 
     await sendAdminEmail({
-      subject: `New payment — ${tier} (KSh ${finalAmount})`,
+      subject: `New payment — ${effectiveTier} (KSh ${finalAmount})`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
           <h1 style="color:#241f27;">New payment received</h1>
           <p style="color:#3d3540; line-height:1.6;">
-            <strong>${tier}</strong> tier — KSh ${finalAmount}${isFreeAccess ? " (free access)" : ""}<br/>
+            <strong>${effectiveTier}</strong> tier — KSh ${finalAmount}${isFreeAccess ? " (free access)" : ""}<br/>
             Surprise for: ${herName}<br/>
             Paid by: ${user.email ?? user.id}<br/>
             Reference: ${paystackReference}

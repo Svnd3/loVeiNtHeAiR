@@ -1,17 +1,19 @@
 import { supabaseUrl, supabaseAnonKey } from './supabaseClient'
 import { resolveLibrarySong, type SongChoice } from '../features/surprise/songs'
 
-export type Tier = 'basic' | 'super' | 'mixed' | 'premium'
+export type Tier = 'basic' | 'super' | 'mixed' | 'premium' | 'custom'
 
-// Accounts that skip Paystack entirely and get whatever tier they pick for
-// free (see TierPaywall.tsx) -- founder/testing accounts only. Visible in the
-// shipped bundle either way (client code always is), but that's not the
-// actual security boundary: verify-surprise-payment.ts derives the caller's
+// Accounts that skip Paystack entirely and always get the full Premium
+// experience for free (see TierPaywall.tsx / verify-surprise-payment, which
+// forces the granted tier to 'premium' server-side regardless of which card
+// they click) -- founder/testing accounts only. Visible in the shipped
+// bundle either way (client code always is), but that's not the actual
+// security boundary: verify-surprise-payment.ts derives the caller's
 // identity from their own signed-in session server-side, so this only ever
 // helps someone who can already sign in as one of these exact addresses.
 // Kept in sync with FREE_ACCESS_EMAILS in
 // supabase/functions/verify-surprise-payment/index.ts.
-export const FREE_ACCESS_EMAILS = ['hezronsande2@gmail.com']
+export const FREE_ACCESS_EMAILS = ['hezronsande2@gmail.com', 'clivemuturi@gmail.com']
 
 export type TierConfig = {
   id: Tier
@@ -57,7 +59,7 @@ export const TIERS: TierConfig[] = [
   {
     id: 'premium',
     name: 'Premium',
-    amount: 759,
+    amount: 649,
     tagline: 'Go all out',
     features: [
       'Everything in Super',
@@ -65,6 +67,17 @@ export const TIERS: TierConfig[] = [
       'Upload your own song instead of the library',
       'Attach the real ticket, reservation, or invite to the gift card',
       'An extra flourish on the final reveal',
+    ],
+  },
+  {
+    id: 'custom',
+    name: 'Custom',
+    amount: 4999,
+    tagline: "Let us build it with you",
+    features: [
+      'Everything in Premium',
+      'Completely redesigned around exactly what you want',
+      'Direct back-and-forth with the creator until it feels right',
     ],
   },
 ]
@@ -87,7 +100,7 @@ export const MIXED_TIER: TierConfig = {
 
 export const MIXED_QUESTION_CAP = 3
 
-export const TIER_RANK: Record<Tier, number> = { basic: 0, super: 1, mixed: 2, premium: 3 }
+export const TIER_RANK: Record<Tier, number> = { basic: 0, super: 1, mixed: 2, premium: 3, custom: 4 }
 
 export function tierConfig(id: Tier): TierConfig {
   return id === 'mixed' ? MIXED_TIER : TIERS.find((t) => t.id === id)!
