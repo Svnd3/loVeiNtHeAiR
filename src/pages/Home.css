@@ -115,7 +115,8 @@
 
 .home__surprise-hint {
   color: var(--text-h);
-  font-size: clamp(16px, 4vw, 20px);
+  font-family: 'Achiko', cursive;
+  font-size: clamp(20px, 5vw, 26px);
   font-weight: 500;
   text-align: center;
 }
