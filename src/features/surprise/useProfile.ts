@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabaseClient'
 import type { SongChoice } from './songs'
 
 // What plays on the unauthenticated "/surprise" demo preview (no real saved
@@ -102,39 +103,95 @@ function readProfile(): StoredProfile | null {
   }
 }
 
-export function useProfile(): SurpriseProfile {
-  return useMemo(() => {
-    const stored = readProfile()
+const PLACEHOLDER_PROFILE: SurpriseProfile = {
+  herName: 'Abbie',
+  himName: 'Kevin',
+  photos: PLACEHOLDER_PHOTOS,
+  himPhotos: PLACEHOLDER_PHOTOS,
+  letter: PLACEHOLDER_LETTER,
+  memories: PLACEHOLDER_MEMORIES,
+  placesPhotos: PLACEHOLDER_PHOTOS.slice(0, 3),
+  gift: PLACEHOLDER_GIFT,
+  song: PLACEHOLDER_SONG,
+  isPlaceholder: true,
+}
 
-    if (!stored) {
-      return {
-        herName: 'Abbie',
-        himName: 'Kevin',
-        photos: PLACEHOLDER_PHOTOS,
-        himPhotos: PLACEHOLDER_PHOTOS,
-        letter: PLACEHOLDER_LETTER,
-        memories: PLACEHOLDER_MEMORIES,
-        placesPhotos: PLACEHOLDER_PHOTOS.slice(0, 3),
-        gift: PLACEHOLDER_GIFT,
-        song: PLACEHOLDER_SONG,
-        isPlaceholder: true,
-      }
+function fromStoredProfile(stored: StoredProfile): SurpriseProfile {
+  const photos = [...(stored.her.photos ?? []), ...(stored.him.photos ?? [])]
+  const himPhotos = stored.him.photos ?? []
+
+  return {
+    herName: stored.her.name,
+    himName: stored.him.name,
+    photos: photos.length > 0 ? photos : PLACEHOLDER_PHOTOS,
+    himPhotos: himPhotos.length > 0 ? himPhotos : PLACEHOLDER_PHOTOS,
+    letter: stored.letter?.trim() || PLACEHOLDER_LETTER,
+    memories: stored.memories?.filter((m) => m.prompt?.trim()) ?? [],
+    placesPhotos: stored.places?.filter(Boolean) ?? [],
+    gift: stored.gift?.photo ? stored.gift : PLACEHOLDER_GIFT,
+    song: stored.song,
+    isPlaceholder: false,
+  }
+}
+
+type RemoteTemplateRow = {
+  her_name: string
+  her_nickname: string
+  him_name: string
+  him_nickname: string
+  letter: string
+  gift: SurpriseGift
+  song: SongChoice | null
+  her_photos: string[]
+  him_photos: string[]
+  memories: SurpriseMemory[]
+  places_photos: string[]
+}
+
+function fromRemoteTemplate(row: RemoteTemplateRow): SurpriseProfile {
+  return {
+    herName: row.her_nickname || row.her_name || 'Abbie',
+    himName: row.him_nickname || row.him_name || 'Kevin',
+    photos: [...(row.her_photos ?? []), ...(row.him_photos ?? [])],
+    himPhotos: row.him_photos ?? [],
+    letter: row.letter || PLACEHOLDER_LETTER,
+    memories: row.memories ?? [],
+    placesPhotos: row.places_photos ?? [],
+    gift: row.gift?.photo ? row.gift : PLACEHOLDER_GIFT,
+    song: row.song ?? undefined,
+    isPlaceholder: false,
+  }
+}
+
+// The unauthenticated /surprise demo: a real surprise the admin picked (see
+// set_preview_template() in schema.sql, wired up via Admin.tsx's "Canon it")
+// if one exists, else whatever's in localStorage from an old in-progress
+// build, else the hardcoded placeholder content above. Async now because the
+// admin-picked case needs a network round trip -- Surprise.tsx shows a
+// loader for the (usually brief) `null` it returns while that resolves.
+export function useProfile(): SurpriseProfile | null {
+  const [profile, setProfile] = useState<SurpriseProfile | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const stored = readProfile()
+    if (stored) {
+      setProfile(fromStoredProfile(stored))
+      return
     }
 
-    const photos = [...(stored.her.photos ?? []), ...(stored.him.photos ?? [])]
-    const himPhotos = stored.him.photos ?? []
+    supabase
+      .rpc('get_preview_surprise')
+      .then(({ data, error }) => {
+        if (cancelled) return
+        const row = Array.isArray(data) ? (data[0] as RemoteTemplateRow | undefined) : undefined
+        setProfile(!error && row ? fromRemoteTemplate(row) : PLACEHOLDER_PROFILE)
+      })
 
-    return {
-      herName: stored.her.name,
-      himName: stored.him.name,
-      photos: photos.length > 0 ? photos : PLACEHOLDER_PHOTOS,
-      himPhotos: himPhotos.length > 0 ? himPhotos : PLACEHOLDER_PHOTOS,
-      letter: stored.letter?.trim() || PLACEHOLDER_LETTER,
-      memories: stored.memories?.filter((m) => m.prompt?.trim()) ?? [],
-      placesPhotos: stored.places?.filter(Boolean) ?? [],
-      gift: stored.gift?.photo ? stored.gift : PLACEHOLDER_GIFT,
-      song: stored.song,
-      isPlaceholder: false,
+    return () => {
+      cancelled = true
     }
   }, [])
+
+  return profile
 }

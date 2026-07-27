@@ -98,6 +98,15 @@ alter table surprises add column if not exists unlock_at timestamptz;
 alter table surprises add column if not exists view_count integer not null default 0;
 alter table surprises add column if not exists first_viewed_at timestamptz;
 alter table surprises add column if not exists last_viewed_at timestamptz;
+-- is_preview_template: the one surprise (if any) admin_list_surprises() lets
+-- hezronsande2@gmail.com flag, via set_preview_template() below, as the
+-- live demo content on the public /surprise preview page (see
+-- get_preview_surprise() and useProfile.ts) instead of its hardcoded
+-- placeholder. The partial unique index means "setting" a new one is really
+-- "clear the old flag, set the new one" -- see set_preview_template().
+alter table surprises add column if not exists is_preview_template boolean not null default false;
+drop index if exists surprises_one_preview_template;
+create unique index surprises_one_preview_template on surprises (is_preview_template) where is_preview_template;
 
 alter table surprises enable row level security;
 
@@ -112,20 +121,24 @@ create table if not exists surprise_payments (
   id uuid primary key default gen_random_uuid(),
   surprise_id uuid not null references surprises(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  tier text not null check (tier in ('basic', 'super', 'mixed', 'premium')),
+  tier text not null check (tier in ('basic', 'super', 'mixed', 'premium', 'custom')),
   amount integer not null,
   paystack_reference text not null unique,
   created_at timestamptz not null default now()
 );
 
 -- Widens the check constraint when this script is re-run against a table
--- created before 'mixed' existed -- 'mixed' is the auto-detected 620 tier
--- for content that needs Premium only because it combines a Super-only
--- extra with a Premium-only one (see computePricing in src/lib/payments.ts).
--- No-op on a fresh install (the create table above already allows it).
+-- created before 'mixed'/'custom' existed -- 'mixed' is the auto-detected
+-- 620 tier for content that needs Premium only because it combines a
+-- Super-only extra with a Premium-only one (see computePricing in
+-- src/lib/payments.ts); 'custom' is the always-offered 4999 bespoke tier
+-- (fully custom-built, everything Premium has plus direct back-and-forth --
+-- not something computePricing ever auto-selects, only ever chosen
+-- voluntarily in TierPaywall). No-op on a fresh install (the create table
+-- above already allows both).
 alter table surprise_payments drop constraint if exists surprise_payments_tier_check;
 alter table surprise_payments add constraint surprise_payments_tier_check
-  check (tier in ('basic', 'super', 'mixed', 'premium'));
+  check (tier in ('basic', 'super', 'mixed', 'premium', 'custom'));
 
 alter table surprise_payments enable row level security;
 
@@ -245,11 +258,126 @@ as $$
   from surprises s
   join surprise_payments sp on sp.surprise_id = s.id
   where s.id = p_surprise_id
-  order by case sp.tier when 'premium' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
+  order by case sp.tier when 'custom' then 5 when 'premium' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
   limit 1;
 $$;
 
 grant execute on function get_surprise(uuid) to anon, authenticated;
+
+-- 3b. Admin-only cross-user surprise browser (hezronsande2@gmail.com's
+-- "superpowers" -- see SurpriseCard.tsx / Admin.tsx). The owner-only RLS
+-- policy above blocks any client-side query from ever seeing another
+-- user's row, so this is the one deliberate hole in that, gated entirely by
+-- the auth.email() check baked into the WHERE clause itself rather than by
+-- anything the client asserts: called by literally anyone signed in, but
+-- returns zero rows for everyone except that one hardcoded address. Joins
+-- auth.users directly (same admin-level access record-surprise-view's
+-- adminClient.auth.admin.getUserById gets via the service-role key, just
+-- reached through SECURITY DEFINER instead of a second service-role client).
+drop function if exists admin_list_surprises();
+create or replace function admin_list_surprises()
+returns table (
+  id uuid,
+  him_name text,
+  him_nickname text,
+  him_country text,
+  him_photos text[],
+  her_name text,
+  her_nickname text,
+  is_preview_template boolean,
+  paid boolean,
+  owner_email text,
+  owner_joined_at timestamptz,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    s.id, s.him_name, s.him_nickname, s.him_country, s.him_photos,
+    s.her_name, s.her_nickname, s.is_preview_template,
+    exists(select 1 from surprise_payments sp where sp.surprise_id = s.id) as paid,
+    u.email, u.created_at as owner_joined_at, s.created_at
+  from surprises s
+  join auth.users u on u.id = s.user_id
+  where auth.email() = 'hezronsande2@gmail.com'
+  order by s.created_at desc;
+$$;
+
+grant execute on function admin_list_surprises() to authenticated;
+
+-- Flags exactly one surprise (clearing whatever was flagged before) as the
+-- public /surprise preview's live content. Same admin-only gate as
+-- admin_list_surprises() -- silently does nothing for anyone else, rather
+-- than erroring in a way that would confirm the admin email to a prober.
+drop function if exists set_preview_template(uuid);
+create or replace function set_preview_template(p_surprise_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.email() <> 'hezronsande2@gmail.com' then
+    return;
+  end if;
+  update surprises set is_preview_template = false where is_preview_template;
+  update surprises set is_preview_template = true where id = p_surprise_id;
+end;
+$$;
+
+grant execute on function set_preview_template(uuid) to authenticated;
+
+-- Public read of whichever surprise is currently flagged as the preview
+-- template -- deliberately doesn't blank content the way get_surprise()
+-- does for a locked/unpaid link, since this is a marketing showcase the
+-- admin picked on purpose, not the real gated link (an admin-chosen example
+-- should never render as "locked" just because its real unlock_at hasn't
+-- passed yet). Returns nothing at all if no surprise is flagged, or the
+-- flagged one somehow has no payment row.
+drop function if exists get_preview_surprise();
+create or replace function get_preview_surprise()
+returns table (
+  her_name text,
+  her_nickname text,
+  him_name text,
+  him_nickname text,
+  letter text,
+  questions text[],
+  know_me_mode text,
+  know_me_quiz jsonb,
+  gift jsonb,
+  song jsonb,
+  her_photos text[],
+  him_photos text[],
+  memories jsonb,
+  places_photos text[],
+  her_photos_compressed text[],
+  him_photos_compressed text[],
+  places_photos_compressed text[],
+  tier text
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    s.her_name, s.her_nickname, s.him_name, s.him_nickname,
+    s.letter, s.questions, s.know_me_mode, s.know_me_quiz, s.gift, s.song,
+    s.her_photos, s.him_photos, s.memories, s.places_photos,
+    s.her_photos_compressed, s.him_photos_compressed, s.places_photos_compressed,
+    sp.tier
+  from surprises s
+  join surprise_payments sp on sp.surprise_id = s.id
+  where s.is_preview_template
+  order by case sp.tier when 'custom' then 5 when 'premium' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
+  limit 1;
+$$;
+
+grant execute on function get_preview_surprise() to anon, authenticated;
 
 -- Records that her link was actually opened (called once she clicks past the
 -- love-quiz intro, not on the bare page load, so a link preview/crawler bot

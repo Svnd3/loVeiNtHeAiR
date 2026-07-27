@@ -4,21 +4,16 @@ import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { useSmartBack } from '../lib/useSmartBack'
 import TierPaywall from '../components/TierPaywall'
+import SurpriseCard, { type SurpriseCardData } from '../components/SurpriseCard'
 import { computePricing } from '../lib/payments'
-import type { SongChoice } from '../features/surprise/songs'
+import { SUPER_ADMIN_EMAIL } from '../lib/admin'
 import './Account.css'
 
-type SurpriseSummary = {
-  id: string
-  herName: string
+type SurpriseSummary = SurpriseCardData & {
   createdAt: string
-  paid: boolean
   viewCount: number
   firstViewedAt: string | null
   unlockAt: string | null
-  song: SongChoice | null
-  hasGiftAttachment: boolean
-  questionCount: number
 }
 
 function statusLabel(surprise: SurpriseSummary) {
@@ -57,7 +52,9 @@ function Account() {
     Promise.all([
       supabase
         .from('surprises')
-        .select('id, her_name, created_at, view_count, first_viewed_at, unlock_at, song, gift, questions')
+        .select(
+          'id, her_name, her_nickname, him_name, him_nickname, him_country, him_photos, created_at, view_count, first_viewed_at, unlock_at',
+        )
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
       supabase.from('surprise_payments').select('surprise_id').eq('user_id', userId),
@@ -71,14 +68,16 @@ function Account() {
           (surprisesResult.data ?? []).map((row) => ({
             id: row.id as string,
             herName: (row.her_name as string) || 'Untitled surprise',
+            herNickname: (row.her_nickname as string) ?? '',
+            himName: (row.him_name as string) ?? '',
+            himNickname: (row.him_nickname as string) ?? '',
+            himCountry: (row.him_country as string) ?? '',
+            himPhotos: (row.him_photos as string[]) ?? [],
             createdAt: row.created_at as string,
             paid: paidIds.has(row.id as string),
             viewCount: (row.view_count as number) ?? 0,
             firstViewedAt: (row.first_viewed_at as string | null) ?? null,
             unlockAt: (row.unlock_at as string | null) ?? null,
-            song: (row.song as SongChoice | null) ?? null,
-            hasGiftAttachment: Boolean((row.gift as { attachment?: string } | null)?.attachment),
-            questionCount: ((row.questions as string[] | null) ?? []).length,
           })),
         )
       }
@@ -176,6 +175,11 @@ function Account() {
           <button type="button" className="account-card__edit" onClick={() => navigate('/details')}>
             Create a new surprise
           </button>
+          {email === SUPER_ADMIN_EMAIL && (
+            <button type="button" className="account-card__edit" onClick={() => navigate('/admin')}>
+              Browse all surprises
+            </button>
+          )}
           <button type="button" className="account-card__switch" onClick={handleSwitchAccount}>
             Switch account
           </button>
@@ -198,84 +202,46 @@ function Account() {
 
           {listError && <p className="account-surprises__error">{listError}</p>}
 
-          <ul className="account-surprises__list">
-            {surprises.map((surprise) => (
-              <li key={surprise.id} className="account-surprises__item">
-                <div className="account-surprises__info">
-                  <span className="account-surprises__name">{surprise.herName}</span>
-                  <span className="account-surprises__date">
-                    {new Date(surprise.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </span>
-                  {surprise.paid && (
-                    <span className={`account-surprises__status ${statusLabel(surprise).className}`}>
-                      {statusLabel(surprise).text}
-                    </span>
-                  )}
+          <div className="account-surprises__grid">
+            {surprises.map((surprise, index) =>
+              confirmingId === surprise.id ? (
+                <div key={surprise.id} className="account-surprises__confirm">
+                  <span>Delete the surprise for {surprise.herName}?</span>
+                  <button
+                    type="button"
+                    className="account-surprises__confirm-cancel"
+                    onClick={() => setConfirmingId(null)}
+                  >
+                    cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="account-surprises__confirm-delete"
+                    onClick={() => handleDelete(surprise.id)}
+                    disabled={deletingId === surprise.id}
+                  >
+                    {deletingId === surprise.id ? 'deleting…' : 'delete'}
+                  </button>
                 </div>
-
-                {confirmingId === surprise.id ? (
-                  <div className="account-surprises__confirm">
-                    <span>Delete this?</span>
-                    <button
-                      type="button"
-                      className="account-surprises__confirm-cancel"
-                      onClick={() => setConfirmingId(null)}
-                    >
-                      cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="account-surprises__confirm-delete"
-                      onClick={() => handleDelete(surprise.id)}
-                      disabled={deletingId === surprise.id}
-                    >
-                      {deletingId === surprise.id ? 'deleting…' : 'delete'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="account-surprises__actions">
-                    {surprise.paid ? (
-                      <a
-                        className="account-surprises__link"
-                        href={`/s/${surprise.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        view
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        className="account-surprises__link account-surprises__pay"
-                        onClick={() => setPayingSurpriseId(surprise.id)}
-                      >
-                        complete payment
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="account-surprises__link"
-                      onClick={() => navigate(`/details/${surprise.id}`)}
-                    >
-                      edit
-                    </button>
-                    <button
-                      type="button"
-                      className="account-surprises__delete"
-                      onClick={() => setConfirmingId(surprise.id)}
-                      aria-label={`Delete surprise for ${surprise.herName}`}
-                    >
-                      delete
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+              ) : (
+                <SurpriseCard
+                  key={surprise.id}
+                  surprise={surprise}
+                  index={index}
+                  variant="mine"
+                  status={
+                    surprise.paid ? (
+                      <span className={`account-surprises__status ${statusLabel(surprise).className}`}>
+                        {statusLabel(surprise).text}
+                      </span>
+                    ) : undefined
+                  }
+                  onPay={() => setPayingSurpriseId(surprise.id)}
+                  onDelete={() => setConfirmingId(surprise.id)}
+                />
+              ),
+            )}
+          </div>
         </div>
       </div>
 
@@ -284,9 +250,7 @@ function Account() {
           surpriseId={payingSurpriseId}
           userEmail={session.user.email ?? ''}
           accessToken={session.access_token}
-          pricing={computePricing(
-            surprises.find((s) => s.id === payingSurpriseId) ?? { song: null, hasGiftAttachment: false, questionCount: 0 },
-          )}
+          pricing={computePricing()}
           onSuccess={() => {
             setSurprises((prev) =>
               prev.map((s) => (s.id === payingSurpriseId ? { ...s, paid: true } : s)),

@@ -4,6 +4,7 @@ import LoveQuiz from './LoveQuiz'
 import KnowMeQuiz from './KnowMeQuiz'
 import AudioPlayer from './AudioPlayer'
 import ScrollStory from './ScrollStory'
+import LoveLoader from '../../components/LoveLoader'
 import { useProfile } from './useProfile'
 import { generateAutoQuestions } from './knowMeQuiz'
 import { useAuth } from '../../lib/AuthContext'
@@ -26,17 +27,27 @@ function Surprise() {
   // same auto-generator real Super/Mixed/Premium surprises use (see
   // SharedSurprise.tsx), fed from the demo's own gift/song, so it's exactly
   // what a buyer would actually get, not a hand-written stand-in.
-  const knowMeQuestions = useMemo(
-    () =>
-      generateAutoQuestions({
-        her_nickname: '',
-        him_nickname: '',
-        him_country: '',
-        gift: profile.gift,
-        song: profile.song ?? null,
-      }),
-    [profile],
-  )
+  const knowMeQuestions = useMemo(() => {
+    if (!profile) return []
+    return generateAutoQuestions({
+      her_nickname: '',
+      him_nickname: '',
+      him_country: '',
+      gift: profile.gift,
+      song: profile.song ?? null,
+    })
+  }, [profile])
+
+  if (!profile) {
+    return (
+      <div
+        className="surprise"
+        style={{ display: 'flex', minHeight: '100dvh', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <LoveLoader label="loading…" />
+      </div>
+    )
+  }
 
   return (
     <div className="surprise">
