@@ -11,7 +11,12 @@ import { isSongAllowedForTier, type SongChoice } from '../features/surprise/song
 import type { SurpriseGift, SurpriseMemory } from '../features/surprise/useProfile'
 import KnowMeQuiz from '../features/surprise/KnowMeQuiz'
 import { generateAutoQuestions, type KnowMeMode, type KnowMeQuestion } from '../features/surprise/knowMeQuiz'
-import { MIXED_QUESTION_CAP, type Tier } from '../lib/payments'
+import { TIER_RANK, type Tier } from '../lib/payments'
+
+// Historical cap for the old 'mixed' tier (no longer sold -- see
+// payments.ts) -- kept only so a surprise bought under that tier still
+// renders exactly what it originally paid for.
+const MIXED_TIER_QUESTION_CAP = 3
 import { recordSurpriseView } from '../lib/notifications'
 import '../features/surprise/Surprise.css'
 import './SharedSurprise.css'
@@ -228,16 +233,17 @@ function SharedSurprise() {
       : data.tier === 'super'
         ? data.questions.slice(0, 1)
         : data.tier === 'mixed'
-          ? data.questions.slice(0, MIXED_QUESTION_CAP)
+          ? data.questions.slice(0, MIXED_TIER_QUESTION_CAP)
           : data.questions
 
-  // The gift attachment (ticket/reservation/document) is a Premium-only
-  // reveal — strip it for Basic/Super even if he uploaded one. The gift photo
-  // itself follows the same compressed-for-Basic rule as the gallery photos.
+  // The gift attachment (ticket/reservation/document) is a Premium-and-up
+  // reveal — strip it for anything below that even if he uploaded one. The
+  // gift photo itself follows the same compressed-for-Basic rule as the
+  // gallery photos.
   const giftForTier = {
     ...data.gift,
     photo: pickPhotoQuality(data.gift.photo, data.gift.photo_compressed, data.tier),
-    attachment: data.tier === 'premium' ? data.gift.attachment : undefined,
+    attachment: TIER_RANK[data.tier] >= TIER_RANK.premium ? data.gift.attachment : undefined,
   }
 
   // "How well do you know me?" mini-quiz — Super/Mixed/Premium only (same
@@ -288,7 +294,7 @@ function SharedSurprise() {
             gift={giftForTier}
             memories={memories}
             placesPhotos={placesPhotos}
-            premium={data.tier === 'premium'}
+            premium={TIER_RANK[data.tier] >= TIER_RANK.premium}
           />
           {data.tier === 'basic' && <p className="shared-surprise-watermark">made with loveintheair</p>}
 

@@ -1,12 +1,9 @@
 import { useRef, useState } from 'react'
 import {
   TIERS,
-  TIER_RANK,
-  MIXED_TIER,
   FREE_ACCESS_EMAILS,
   generatePaymentReference,
   verifySurprisePayment,
-  tierConfig,
   type PricingResult,
   type Tier,
 } from '../lib/payments'
@@ -33,6 +30,8 @@ declare global {
   }
 }
 
+const TIER = TIERS[0]
+
 // Mounted by the parent only while the paywall should be visible — that way
 // each appearance starts from fresh state instead of needing an effect to
 // reset it on reopen (same pattern as shareitt's TierPaywall).
@@ -40,38 +39,28 @@ export default function TierPaywall({
   surpriseId,
   userEmail,
   accessToken,
-  pricing,
   onSuccess,
   onClose,
 }: {
   surpriseId: string
   userEmail: string
   accessToken: string
-  // What he actually filled in requires at least `pricing.requiredTier` —
-  // any tier ranked below that gets disabled below rather than sold for a
-  // price that wouldn't actually show everything he added.
-  pricing: PricingResult
+  // Unused now that there's a single flat price -- kept so callers (Details.tsx,
+  // Account.tsx) don't need to change what they pass in.
+  pricing?: PricingResult
   onSuccess: (tier: Tier) => void
   onClose?: () => void
 }) {
-  const [selectedTierId, setSelectedTierId] = useState<Tier | null>(null)
-  const [stage, setStage] = useState<'idle' | 'confirming' | 'error'>('idle')
+  const [stage, setStage] = useState<'idle' | 'paying' | 'confirming' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const confirmingRef = useRef(false)
 
-  // Mixed isn't one of the normal always-offered tiers — it only shows up
-  // (between Super and Premium) when his content actually needs it.
-  const displayTiers =
-    pricing.requiredTier === 'mixed'
-      ? [TIERS[0], TIERS[1], MIXED_TIER, TIERS[2]]
-      : TIERS
-
   const isFreeAccess = FREE_ACCESS_EMAILS.includes(userEmail.toLowerCase())
 
-  const confirmPayment = (reference: string, tier: Tier) => {
+  const confirmPayment = (reference: string) => {
     confirmingRef.current = true
     setStage('confirming')
-    verifySurprisePayment({ reference, tier, surpriseId, accessToken })
+    verifySurprisePayment({ reference, tier: TIER.id, surpriseId, accessToken })
       .then((payment) => {
         confirmingRef.current = false
         setStage('idle')
@@ -84,42 +73,42 @@ export default function TierPaywall({
       })
   }
 
-  const handlePickTier = (tier: (typeof TIERS)[number]) => {
-    if (stage === 'confirming') return
-    if (TIER_RANK[tier.id] < TIER_RANK[pricing.requiredTier]) return
-    setSelectedTierId(tier.id)
+  const handlePay = () => {
+    if (stage === 'paying' || stage === 'confirming') return
+    setStage('paying')
     setErrorMessage('')
 
     // Founder/testing accounts (see FREE_ACCESS_EMAILS) skip Paystack
     // entirely -- verify-surprise-payment recognizes the same address
-    // server-side and grants the tier without ever checking a reference.
+    // server-side and grants access without ever checking a reference.
     if (isFreeAccess) {
-      confirmPayment(generatePaymentReference(tier.id), tier.id)
+      confirmPayment(generatePaymentReference(TIER.id))
       return
     }
 
     if (!window.PaystackPop) {
+      setStage('error')
       setErrorMessage('Payment is unavailable right now. Please try again shortly.')
       return
     }
 
-    const reference = generatePaymentReference(tier.id)
+    const reference = generatePaymentReference(TIER.id)
     const paystackPop = new window.PaystackPop()
 
     paystackPop.checkout({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: userEmail || 'creator@loveintheair.app',
-      amount: tier.amount * 100,
+      amount: TIER.amount * 100,
       currency: 'KES',
       // Apple Pay only shows up on Apple devices/Safari; everyone else still
       // sees the normal checkout with these channels.
       channels: ['mobile_money', 'card'],
       ref: reference,
       onSuccess: (transaction) => {
-        confirmPayment(transaction.reference, tier.id)
+        confirmPayment(transaction.reference)
       },
       onCancel: () => {
-        if (!confirmingRef.current) setSelectedTierId(null)
+        if (!confirmingRef.current) setStage('idle')
       },
       onError: (error) => {
         setStage('error')
@@ -134,16 +123,8 @@ export default function TierPaywall({
         <div className="tier-paywall__header">
           <div>
             <p className="tier-paywall__eyebrow">One last step</p>
-            <h2 className="tier-paywall__title">Pick how you want to send it</h2>
-            <p className="tier-paywall__subtitle">
-              Everything you just filled in is saved. Choose a tier to get her link.
-            </p>
-            {pricing.requiredTier !== 'basic' && (
-              <p className="tier-paywall__subtitle">
-                What you added needs at least <strong>{tierConfig(pricing.requiredTier).name}</strong> to
-                show — go back and remove the extra song/questions/attachment if you want a cheaper tier instead.
-              </p>
-            )}
+            <h2 className="tier-paywall__title">Send her the link</h2>
+            <p className="tier-paywall__subtitle">Everything you just filled in is saved.</p>
           </div>
           {onClose && (
             <button
@@ -158,41 +139,27 @@ export default function TierPaywall({
           )}
         </div>
 
-        <div className="tier-paywall__tiers">
-          {displayTiers.map((tier) => {
-            const locked = TIER_RANK[tier.id] < TIER_RANK[pricing.requiredTier]
-            return (
-              <button
-                key={tier.id}
-                type="button"
-                onClick={() => handlePickTier(tier)}
-                disabled={stage === 'confirming' || locked}
-                aria-disabled={locked}
-                className={`tier-paywall__tier ${selectedTierId === tier.id ? 'tier-paywall__tier--selected' : ''} ${locked ? 'tier-paywall__tier--locked' : ''}`}
-              >
-                <div className="tier-paywall__tier-head">
-                  <span className="tier-paywall__tier-name">{tier.name}</span>
-                  <span className="tier-paywall__tier-amount">KSh {tier.amount}</span>
-                </div>
-                <p className="tier-paywall__tier-tagline">{tier.tagline}</p>
-                <ul className="tier-paywall__tier-features">
-                  {tier.features.map((feature) => (
-                    <li key={feature}>{feature}</li>
-                  ))}
-                </ul>
-                {locked && (
-                  <p className="tier-paywall__tier-locked-note">
-                    Needs what you added — pick {tierConfig(pricing.requiredTier).name} instead
-                  </p>
-                )}
-              </button>
-            )
-          })}
+        <div className="tier-paywall__single">
+          <div className="tier-paywall__tier-head">
+            <span className="tier-paywall__tier-name">{TIER.tagline}</span>
+            <span className="tier-paywall__tier-amount">KSh {TIER.amount}</span>
+          </div>
+          <ul className="tier-paywall__tier-features">
+            {TIER.features.map((feature) => (
+              <li key={feature}>{feature}</li>
+            ))}
+          </ul>
         </div>
 
-        {stage === 'confirming' && (
-          <p className="tier-paywall__status">Confirming payment…</p>
-        )}
+        <button
+          type="button"
+          className="tier-paywall__pay-btn"
+          onClick={handlePay}
+          disabled={stage === 'paying' || stage === 'confirming'}
+        >
+          {stage === 'confirming' ? 'Confirming payment…' : `Pay KSh ${TIER.amount}`}
+        </button>
+
         {errorMessage && <p className="tier-paywall__error">{errorMessage}</p>}
 
         <p className="tier-paywall__footnote">Secured by Paystack · SSL encrypted</p>

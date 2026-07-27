@@ -122,11 +122,6 @@ const LETTER_TEMPLATES: { title: string; text: (name: string) => string }[] = [
   },
 ]
 
-function TierBadge({ tier }: { tier: 'basic' | 'super' | 'premium' }) {
-  const label = tier === 'basic' ? 'Basic' : tier === 'super' ? 'Super+' : 'Premium'
-  return <span className={`tier-badge tier-badge--${tier}`}>{label}</span>
-}
-
 function isoToDatetimeLocal(iso: string) {
   const date = new Date(iso)
   const offsetMs = date.getTimezoneOffset() * 60000
@@ -143,7 +138,7 @@ function ScheduleSection({
   return (
     <div className="schedule-section">
       <h2 className="profile-section__title">
-        Schedule it (optional) <TierBadge tier="basic" />
+        Schedule it (optional)
       </h2>
       <p className="profile-section__hint">
         Send her the link whenever, but keep it locked until a moment you pick — her birthday
@@ -197,7 +192,7 @@ function PlacesSection({
   return (
     <div className="places-section">
       <h2 className="profile-section__title">
-        Places you've both been <TierBadge tier="basic" />
+        Places you've both been
       </h2>
       <p className="profile-section__hint">
         Add 1–3 photos from somewhere you've been together. She'll be asked if she remembers,
@@ -263,7 +258,7 @@ function QuestionSection({
   return (
     <div className="letter-section">
       <h2 className="profile-section__title">
-        Ask her your own question <TierBadge tier="super" />
+        Ask her your own question
       </h2>
       <p className="profile-section__hint">
         Replaces "Do you believe in love?" as the yes/no she has to get past before it opens. Super
@@ -333,7 +328,7 @@ function KnowMeQuizSection({
   return (
     <div className="letter-section">
       <h2 className="profile-section__title">
-        How well does she know you? <TierBadge tier="super" />
+        How well does she know you?
       </h2>
       <p className="profile-section__hint">
         A 3-question mini-quiz she plays right after the yes/no gate. Auto-generate builds it from
@@ -561,7 +556,7 @@ function MemorySection({
   return (
     <div className="memory-section">
       <h2 className="profile-section__title">
-        Do you remember? <TierBadge tier="basic" />
+        Do you remember?
       </h2>
       <p className="profile-section__hint">
         A special moment, or something you think she's forgotten. Each one shows up mid-scroll as
@@ -708,7 +703,7 @@ function GiftSection({
   return (
     <div className="gift-section">
       <h2 className="profile-section__title">
-        Plan her surprise <TierBadge tier="basic" />
+        Plan her surprise
       </h2>
       <p className="profile-section__hint">
         What are you actually surprising her with? This is what she'll scratch to reveal at the
@@ -804,7 +799,7 @@ function GiftSection({
 
       <div className="gift-attachment">
         <span className="gift-photo__label">
-          Ticket, reservation, or document (optional) <TierBadge tier="premium" />
+          Ticket, reservation, or document (optional)
         </span>
         <p className="gift-attachment__hint">
           Got an actual ticket, booking confirmation, or invite? Attach a photo of it — she'll be
@@ -910,7 +905,7 @@ function SongSection({
   return (
     <div className="song-section">
       <h2 className="profile-section__title">
-        Pick a song <TierBadge tier="basic" />
+        Pick a song
       </h2>
       <p className="profile-section__hint">
         What should be playing while she scrolls through your memories?
@@ -944,9 +939,7 @@ function SongSection({
             >
               {previewingId === option.id ? '❚❚' : '▶'}
             </span>
-            <span className="song-card__title">
-              {option.title} {option.tier === 'super' && <TierBadge tier="super" />}
-            </span>
+            <span className="song-card__title">{option.title}</span>
             <span className="song-card__artist">{option.artist}</span>
           </button>
         ))}
@@ -982,7 +975,7 @@ function SongSection({
             className="letter-templates-btn"
             onClick={() => fileInputRef.current?.click()}
           >
-            Can't find one? Upload your own <TierBadge tier="premium" />
+            Can't find one? Upload your own
           </button>
         )}
         <input ref={fileInputRef} type="file" accept="audio/*" hidden onChange={pickSong} />
@@ -1048,7 +1041,7 @@ function ProfileSection({
   return (
     <div className="profile-section">
       <h2 className="profile-section__title">
-        {title} <TierBadge tier="basic" />
+        {title}
       </h2>
       <p className="profile-section__hint">{hint}</p>
 
@@ -1632,11 +1625,7 @@ function Details() {
   }
 
   if (showPaywall && surpriseId && session) {
-    const pricing = computePricing({
-      song,
-      hasGiftAttachment: Boolean(gift.attachment),
-      questionCount: questions.map((q) => q.trim()).filter(Boolean).length,
-    })
+    const pricing = computePricing()
     return (
       <TierPaywall
         surpriseId={surpriseId}
@@ -1780,7 +1769,7 @@ function Details() {
         <div className="letter-section__header">
           <div>
             <h2 className="profile-section__title">
-              Write her something <TierBadge tier="basic" />
+              Write her something
             </h2>
           </div>
           <button

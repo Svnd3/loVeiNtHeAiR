@@ -1,4 +1,4 @@
-import type { Tier } from '../../lib/payments'
+import { TIER_RANK, type Tier } from '../../lib/payments'
 
 export type SongOption = {
   id: string
@@ -34,11 +34,11 @@ export function resolveLibrarySong(choice: SongChoice | undefined): SongOption |
   return SONG_LIBRARY.find((song) => song.id === choice.id) ?? null
 }
 
-// Upload-your-own is Premium-only; a handful of library picks need Super or
+// Upload-your-own is Premium-and-up; a handful of library picks need Super or
 // above; everything else in the library plays on every tier.
 export function isSongAllowedForTier(song: SongChoice | null | undefined, tier: Tier): boolean {
   if (!song) return true
-  if (song.type === 'upload') return tier === 'premium'
+  if (song.type === 'upload') return TIER_RANK[tier] >= TIER_RANK.premium
   const option = resolveLibrarySong(song)
   if (option?.tier === 'super') return tier !== 'basic'
   return true

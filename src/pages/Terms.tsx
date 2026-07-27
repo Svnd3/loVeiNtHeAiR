@@ -105,9 +105,10 @@ function Terms() {
           <h3>7. Paid features &amp; billing</h3>
           <p>
             Building a page is free. Getting the link to send your Recipient requires a one-time
-            payment, chosen from three tiers — Basic (KSh 499), Super (KSh 599), and Premium (KSh
-            759) — each unlocking more of what she'll see (things like your own uploaded song, the
-            gift attachment, and a couple of extra touches at the top tier). The exact features
+            payment, chosen from four tiers — Basic (KSh 499), Super (KSh 599), Premium (KSh 649),
+            and Custom (KSh 4999) — each unlocking more of what she'll see (things like your own
+            uploaded song, the gift attachment, a couple of extra touches at the top tiers, and a
+            fully bespoke redesign at Custom). The exact features
             included in each tier are shown to you before you pay. Payments are processed by
             Paystack; we never see or store your card or mobile money details ourselves.
           </p>
