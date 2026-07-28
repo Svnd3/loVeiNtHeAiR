@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import { sendWelcomeEmail, signupInProgress } from '../lib/notifications'
+import { resolveUsernameLogin } from '../lib/usernameAuth'
 import './Login.css'
 
 function maskEmail(value: string) {
@@ -103,6 +104,8 @@ function Login() {
   const passwordRef = useRef<HTMLInputElement>(null)
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [useUsername, setUseUsername] = useState(false)
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -210,6 +213,30 @@ function Login() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+
+    if (useUsername) {
+      if (!username.trim() || !password) {
+        setError('Enter your username and password.')
+        return
+      }
+      setError('')
+      setInfo('')
+      setSubmitting(true)
+      const account = resolveUsernameLogin(username, password)
+      if (!account) {
+        setError('Invalid username or password.')
+        setSubmitting(false)
+        return
+      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: account.email,
+        password: account.realPassword,
+      })
+      if (signInError) setError(signInError.message)
+      setSubmitting(false)
+      return
+    }
+
     if (!email.trim() || !password) {
       setError('Enter your email and password.')
       return
@@ -348,26 +375,42 @@ function Login() {
 
         <div className="tengah">
           <form className="login" onSubmit={handleSubmit}>
-            <button type="button" className="google-button" onClick={handleGoogle}>
-              <GoogleIcon />
-              Continue with Google
-            </button>
+            {!useUsername && (
+              <>
+                <button type="button" className="google-button" onClick={handleGoogle}>
+                  <GoogleIcon />
+                  Continue with Google
+                </button>
 
-            <div className="login__divider">
-              <span>or</span>
-            </div>
+                <div className="login__divider">
+                  <span>or</span>
+                </div>
+              </>
+            )}
 
             <label>
               <UserIcon />
-              <input
-                ref={emailRef}
-                className="username"
-                type="email"
-                autoComplete="email"
-                placeholder="Email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
+              {useUsername ? (
+                <input
+                  ref={emailRef}
+                  className="username"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                />
+              ) : (
+                <input
+                  ref={emailRef}
+                  className="username"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              )}
             </label>
             <label>
               <LockIcon />
@@ -385,9 +428,23 @@ function Login() {
               </button>
             </label>
 
-            {mode === 'signin' && (
+            {mode === 'signin' && !useUsername && (
               <button type="button" className="login__forgot" onClick={handleForgotPassword}>
                 forgot password?
+              </button>
+            )}
+
+            {mode === 'signin' && (
+              <button
+                type="button"
+                className="login__forgot"
+                onClick={() => {
+                  setUseUsername((prev) => !prev)
+                  setError('')
+                  setInfo('')
+                }}
+              >
+                {useUsername ? 'use email instead' : 'use username instead'}
               </button>
             )}
 
@@ -435,6 +492,7 @@ function Login() {
         </div>
 
         <div className="footer">
+          {!useUsername && (
           <p>
             {mode === 'signin' ? (
               <>
@@ -468,6 +526,7 @@ function Login() {
               </>
             )}
           </p>
+          )}
         </div>
       </div>
     </main>

@@ -29,7 +29,11 @@ const TIER = "premium";
 // keep server-side even though the client also knows this list: the
 // caller's email still has to come from their own signed-in session below,
 // never from anything the client claims.
-const FREE_ACCESS_EMAILS = ["hezronsande2@gmail.com", "clivemuturi@gmail.com"];
+const FREE_ACCESS_EMAILS = [
+  "hezronsande2@gmail.com",
+  "clivemuturi@gmail.com",
+  "jt@internal.loveintheair.app",
+];
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {

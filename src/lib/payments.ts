@@ -15,7 +15,11 @@ export type Tier = 'basic' | 'super' | 'mixed' | 'premium' | 'custom'
 // helps someone who can already sign in as one of these exact addresses.
 // Kept in sync with FREE_ACCESS_EMAILS in
 // supabase/functions/verify-surprise-payment/index.ts.
-export const FREE_ACCESS_EMAILS = ['hezronsande2@gmail.com', 'clivemuturi@gmail.com']
+export const FREE_ACCESS_EMAILS = [
+  'hezronsande2@gmail.com',
+  'clivemuturi@gmail.com',
+  'jt@internal.loveintheair.app',
+]
 
 export type TierConfig = {
   id: Tier
