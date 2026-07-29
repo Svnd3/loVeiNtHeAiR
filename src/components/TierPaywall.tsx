@@ -142,7 +142,9 @@ export default function TierPaywall({
         <div className="tier-paywall__single">
           <div className="tier-paywall__tier-head">
             <span className="tier-paywall__tier-name">{TIER.tagline}</span>
-            <span className="tier-paywall__tier-amount">KSh {TIER.amount}</span>
+            <span className="tier-paywall__tier-amount">
+              {isFreeAccess ? 'Free for you' : `KSh ${TIER.amount}`}
+            </span>
           </div>
           <ul className="tier-paywall__tier-features">
             {TIER.features.map((feature) => (
@@ -157,12 +159,20 @@ export default function TierPaywall({
           onClick={handlePay}
           disabled={stage === 'paying' || stage === 'confirming'}
         >
-          {stage === 'confirming' ? 'Confirming payment…' : `Pay KSh ${TIER.amount}`}
+          {stage === 'confirming'
+            ? isFreeAccess
+              ? 'Setting it up…'
+              : 'Confirming payment…'
+            : isFreeAccess
+              ? 'Continue — it\'s free for you'
+              : `Pay KSh ${TIER.amount}`}
         </button>
 
         {errorMessage && <p className="tier-paywall__error">{errorMessage}</p>}
 
-        <p className="tier-paywall__footnote">Secured by Paystack · SSL encrypted</p>
+        <p className="tier-paywall__footnote">
+          {isFreeAccess ? 'Founder account — no charge' : 'Secured by Paystack · SSL encrypted'}
+        </p>
       </div>
     </div>
   )
