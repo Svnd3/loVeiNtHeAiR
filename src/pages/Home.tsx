@@ -5,7 +5,7 @@ function Home() {
   return (
     <main className="home">
       <Link to="/login" className="home__login-link">
-        Log In
+        Sign Up
       </Link>
 
       <div className="home__surprise-wrap">

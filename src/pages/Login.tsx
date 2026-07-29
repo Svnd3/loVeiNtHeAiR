@@ -16,6 +16,22 @@ function maskEmail(value: string) {
   return `${name[0]}${stars}${name[name.length - 1]}${domain}`
 }
 
+const VISITED_KEY = 'loveintheair_visited_login'
+
+// First time this browser ever reaches the login page, default to the
+// sign-up form (most visitors from Home won't have an account yet); every
+// visit after that defaults to sign-in instead. Reads and marks the flag in
+// one pass so it only ever "counts" a visit once.
+function initialMode(): 'signin' | 'signup' {
+  try {
+    if (localStorage.getItem(VISITED_KEY)) return 'signin'
+    localStorage.setItem(VISITED_KEY, '1')
+    return 'signup'
+  } catch {
+    return 'signin'
+  }
+}
+
 function throttle<T extends (event: Event) => void>(fn: T, wait: number) {
   let last = 0
   let timeout: ReturnType<typeof setTimeout> | null = null
@@ -103,7 +119,7 @@ function Login() {
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode)
   const [useUsername, setUseUsername] = useState(false)
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
