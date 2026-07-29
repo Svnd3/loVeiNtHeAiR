@@ -15,7 +15,7 @@ type Stage = 'title' | 'title-fade' | 'countdown' | 'question'
 // faintly through the quiz's full-screen background, without touching
 // KNOW_ME_COLORS itself -- that same palette also colors the solid answer
 // buttons, which should stay fully opaque.
-function toBackdropTint(hex: string) {
+export function toBackdropTint(hex: string) {
   const value = hex.replace('#', '')
   const r = parseInt(value.slice(0, 2), 16)
   const g = parseInt(value.slice(2, 4), 16)
@@ -23,7 +23,7 @@ function toBackdropTint(hex: string) {
   return `rgba(${r}, ${g}, ${b}, 0.9)`
 }
 
-function useColorCycle(active: boolean) {
+export function useColorCycle(active: boolean) {
   const [index, setIndex] = useState(0)
   useEffect(() => {
     if (!active) return

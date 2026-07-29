@@ -240,10 +240,14 @@ function SharedSurprise() {
   // reveal — strip it for anything below that even if he uploaded one. The
   // gift photo itself follows the same compressed-for-Basic rule as the
   // gallery photos.
+  const isPremiumUp = TIER_RANK[data.tier] >= TIER_RANK.premium
   const giftForTier = {
     ...data.gift,
     photo: pickPhotoQuality(data.gift.photo, data.gift.photo_compressed, data.tier),
-    attachment: TIER_RANK[data.tier] >= TIER_RANK.premium ? data.gift.attachment : undefined,
+    attachment: isPremiumUp ? data.gift.attachment : undefined,
+    guess_question: isPremiumUp ? data.gift.guess_question : undefined,
+    guess_options: isPremiumUp ? data.gift.guess_options : undefined,
+    guess_correct_index: isPremiumUp ? data.gift.guess_correct_index : undefined,
   }
 
   // "How well do you know me?" mini-quiz — Super/Mixed/Premium only (same
@@ -294,7 +298,7 @@ function SharedSurprise() {
             gift={giftForTier}
             memories={memories}
             placesPhotos={placesPhotos}
-            premium={TIER_RANK[data.tier] >= TIER_RANK.premium}
+            premium={isPremiumUp}
           />
           {data.tier === 'basic' && <p className="shared-surprise-watermark">made with loveintheair</p>}
 

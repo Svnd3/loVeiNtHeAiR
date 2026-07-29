@@ -595,6 +595,12 @@ type GiftDraft = {
   message: string
   photo: PhotoItem | null
   attachment: PhotoItem | null
+  // Optional "guess the gift" mini-game (see GuessGiftQuiz.tsx) -- only
+  // ever offered once an attachment is added, and only actually saved once
+  // he's filled in the question and all 3 answers (see isGuessGameComplete).
+  guessQuestion: string
+  guessOptions: string[]
+  guessCorrectIndex: number
 }
 
 const emptyGift: GiftDraft = {
@@ -605,6 +611,15 @@ const emptyGift: GiftDraft = {
   message: '',
   photo: null,
   attachment: null,
+  guessQuestion: '',
+  guessOptions: ['', '', ''],
+  guessCorrectIndex: 0,
+}
+
+function isGuessGameComplete(gift: GiftDraft) {
+  return Boolean(
+    gift.attachment && gift.guessQuestion.trim() && gift.guessOptions.every((o) => o.trim()),
+  )
 }
 
 const GIFT_TYPES: { value: GiftType; label: string }[] = [
@@ -811,7 +826,15 @@ function GiftSection({
             <button
               type="button"
               className="photo-grid__remove"
-              onClick={() => onChange({ ...gift, attachment: null })}
+              onClick={() =>
+                onChange({
+                  ...gift,
+                  attachment: null,
+                  guessQuestion: '',
+                  guessOptions: ['', '', ''],
+                  guessCorrectIndex: 0,
+                })
+              }
               aria-label="Remove attachment"
             >
               ×
@@ -835,6 +858,47 @@ function GiftSection({
           onChange={pickAttachment}
         />
       </div>
+
+      {gift.attachment && (
+        <div className="gift-guess">
+          <span className="gift-photo__label">Guess-the-gift game (optional)</span>
+          <p className="gift-attachment__hint">
+            Give her 2 guesses at what it really is before the attachment reveals. Leave this
+            blank to just flip straight to it like usual.
+          </p>
+          <label className="profile-field">
+            <span>The question</span>
+            <input
+              type="text"
+              placeholder="e.g. What am I actually surprising you with?"
+              value={gift.guessQuestion}
+              onChange={(event) => onChange({ ...gift, guessQuestion: event.target.value })}
+            />
+          </label>
+          {gift.guessOptions.map((option, index) => (
+            <label className="gift-guess__option" key={index}>
+              <input
+                type="radio"
+                name="gift-guess-correct"
+                checked={gift.guessCorrectIndex === index}
+                onChange={() => onChange({ ...gift, guessCorrectIndex: index })}
+                aria-label={`Answer ${index + 1} is the real one`}
+              />
+              <input
+                type="text"
+                placeholder={index === 0 ? 'The real answer' : `Decoy answer ${index}`}
+                value={option}
+                onChange={(event) => {
+                  const nextOptions = gift.guessOptions.map((o, i) =>
+                    i === index ? event.target.value : o,
+                  )
+                  onChange({ ...gift, guessOptions: nextOptions })
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1267,6 +1331,9 @@ function Details() {
           photo?: string
           photo_compressed?: string
           attachment?: string
+          guess_question?: string
+          guess_options?: string[]
+          guess_correct_index?: number
         }
         setGift({
           type: giftData.type ?? 'date',
@@ -1280,6 +1347,12 @@ function Details() {
           attachment: giftData.attachment
             ? { url: giftData.attachment, compressedUrl: giftData.attachment }
             : null,
+          guessQuestion: giftData.guess_question ?? '',
+          guessOptions:
+            giftData.guess_options && giftData.guess_options.length === 3
+              ? giftData.guess_options
+              : ['', '', ''],
+          guessCorrectIndex: giftData.guess_correct_index ?? 0,
         })
         setSurpriseId(editId)
         setLoadingExisting(false)
@@ -1477,6 +1550,11 @@ function Details() {
             photo: giftPhotoResult.original,
             photo_compressed: giftPhotoResult.compressed,
             attachment: giftAttachment,
+            guess_question: isGuessGameComplete(gift) ? gift.guessQuestion.trim() : '',
+            guess_options: isGuessGameComplete(gift)
+              ? gift.guessOptions.map((o) => o.trim())
+              : [],
+            guess_correct_index: isGuessGameComplete(gift) ? gift.guessCorrectIndex : 0,
           },
         })
         .eq('id', id)
@@ -1579,6 +1657,9 @@ function Details() {
             photo: '',
             photo_compressed: '',
             attachment: '',
+            guess_question: '',
+            guess_options: [],
+            guess_correct_index: 0,
           },
           her_photos: [],
           her_photos_compressed: [],
@@ -1667,6 +1748,10 @@ function Details() {
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
+
+        <a href={shareUrl} target="_blank" rel="noopener noreferrer" className="details__preview-link">
+          👀 Preview it yourself before sending
+        </a>
 
         {uploading && (
           <div className="details__upload-status">

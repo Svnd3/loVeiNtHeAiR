@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import Confetti from './Confetti'
+import GuessGiftQuiz from './GuessGiftQuiz'
 import type { SurpriseGift } from './useProfile'
 import './ScratchReveal.css'
 
@@ -55,7 +56,17 @@ function ScratchReveal({
   const previousOverflowRef = useRef('')
   const [revealed, setRevealed] = useState(false)
   const [flipped, setFlipped] = useState(false)
+  const [guessing, setGuessing] = useState(false)
   const hasAttachment = Boolean(gift.attachment)
+  // Optional -- only set when he's filled in a question and all 3 answers in
+  // Details.tsx (see GiftSection). Attachment-havers who skip it just get
+  // the plain flip-to-reveal below, unchanged from before this existed.
+  const hasGuessGame = Boolean(
+    gift.attachment &&
+      gift.guess_question?.trim() &&
+      gift.guess_options &&
+      gift.guess_options.length === 3,
+  )
 
   const lockScroll = () => {
     previousOverflowRef.current = document.body.style.overflow
@@ -75,6 +86,12 @@ function ScratchReveal({
   useEffect(() => {
     if (revealed) unlockScroll()
   }, [revealed])
+
+  useEffect(() => {
+    if (guessing) lockScroll()
+    else unlockScroll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guessing])
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -195,7 +212,14 @@ function ScratchReveal({
         </button>
       )}
 
-      {revealed && hasAttachment && (
+      {revealed && hasAttachment && hasGuessGame && !flipped && (
+        <button type="button" className="scratch-card__flip-btn" onClick={() => setGuessing(true)}>
+          <FlipIcon />
+          guess what it is →
+        </button>
+      )}
+
+      {revealed && hasAttachment && (!hasGuessGame || flipped) && (
         <button
           type="button"
           className="scratch-card__flip-btn"
@@ -204,6 +228,19 @@ function ScratchReveal({
           <FlipIcon />
           {flipped ? 'back to the surprise' : 'see the attachment'}
         </button>
+      )}
+
+      {guessing && gift.attachment && (
+        <GuessGiftQuiz
+          question={gift.guess_question!}
+          options={gift.guess_options!}
+          correctIndex={gift.guess_correct_index ?? 0}
+          attachmentPhoto={gift.attachment}
+          onDone={() => {
+            setGuessing(false)
+            setFlipped(true)
+          }}
+        />
       )}
     </section>
   )

@@ -21,6 +21,11 @@ type StoredGift = {
   photo: string
   photo_compressed?: string
   attachment?: string
+  // Optional "guess the gift" mini-game (see GuessGiftQuiz.tsx) -- only
+  // ever shown when all three are present alongside `attachment` itself.
+  guess_question?: string
+  guess_options?: string[]
+  guess_correct_index?: number
 }
 
 // Rendered as a 3-slide swipeable card (MemoryCard.tsx): the prompt, then
@@ -89,6 +94,10 @@ const PLACEHOLDER_GIFT: SurpriseGift = {
   when: 'This Saturday, 7pm',
   message: "Get dressed up — I'm taking you out. Meet me at yours and I'll do the rest.",
   photo: PLACEHOLDER_PHOTOS[0],
+  attachment: PLACEHOLDER_PHOTOS[2],
+  guess_question: 'What am I actually surprising you with?',
+  guess_options: ['Dinner reservations', 'Concert tickets', 'A spa day'],
+  guess_correct_index: 0,
 }
 
 function readProfile(): StoredProfile | null {

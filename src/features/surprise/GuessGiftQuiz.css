@@ -1,0 +1,48 @@
+/* Same visual language as know-me-quiz, just mounted as a full-screen
+   overlay on top of the scratch card rather than as a page-level step. */
+.know-me-quiz.guess-gift-quiz {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.guess-gift-quiz__option--right {
+  outline: 4px solid #22c55e !important;
+  outline-offset: 2px;
+}
+
+.guess-gift-quiz__option--wrong {
+  outline: 4px solid #ef4444 !important;
+  outline-offset: 2px;
+  opacity: 0.55;
+}
+
+.guess-gift-quiz__feedback {
+  font-family: 'Achiko', cursive;
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
+}
+
+.guess-gift-quiz--reveal .know-me-quiz__progress {
+  font-size: 0.95rem;
+}
+
+.guess-gift-quiz__photo {
+  width: min(360px, 80vw);
+  max-height: 55dvh;
+  object-fit: cover;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.55);
+}
+
+.guess-gift-quiz__done {
+  margin-top: 8px;
+  height: 46px;
+  padding: 0 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #241f27;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
