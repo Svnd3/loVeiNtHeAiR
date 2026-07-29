@@ -21,7 +21,7 @@ const CORS_HEADERS = {
 // SharedSurprise.tsx / songs.ts still read those to render exactly what was
 // originally paid for. Kept in sync with PRICE in src/lib/payments.ts, which
 // only drives what the UI shows -- this copy is what actually enforces it.
-const PRICE = 359;
+const PRICE = 299;
 const TIER = "premium";
 
 // Founder/testing accounts -- skip Paystack entirely and get full access for

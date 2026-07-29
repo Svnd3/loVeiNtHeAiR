@@ -34,7 +34,7 @@ export type TierConfig = {
 // which re-checks this amount server-side against what Paystack actually
 // confirms -- this copy only drives what the UI shows and what amount gets
 // sent to Paystack.
-export const PRICE = 359
+export const PRICE = 299
 
 export const TIERS: TierConfig[] = [
   {
