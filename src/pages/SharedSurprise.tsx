@@ -12,6 +12,7 @@ import type { SurpriseGift, SurpriseMemory } from '../features/surprise/useProfi
 import KnowMeQuiz from '../features/surprise/KnowMeQuiz'
 import { generateAutoQuestions, type KnowMeMode, type KnowMeQuestion } from '../features/surprise/knowMeQuiz'
 import { TIER_RANK, type Tier } from '../lib/payments'
+import { preloadImages } from '../lib/preloadImages'
 
 // Historical cap for the old 'mixed' tier (no longer sold -- see
 // payments.ts) -- kept only so a surprise bought under that tier still
@@ -139,6 +140,21 @@ function SharedSurprise() {
           song: data.song,
         })
   }, [data])
+
+  // Starts pulling every photo she'll eventually see into the browser cache
+  // the instant the row arrives -- well before she's even answered the love
+  // quiz -- so CurveGallery/MemoryCard/ScratchReveal further down just show
+  // an already-cached image instead of visibly loading one.
+  useEffect(() => {
+    if (!data) return
+    preloadImages([
+      ...photos,
+      ...placesPhotos,
+      ...memories.map((m) => m.photo),
+      pickPhotoQuality(data.gift.photo, data.gift.photo_compressed, data.tier),
+      TIER_RANK[data.tier] >= TIER_RANK.premium ? data.gift.attachment : undefined,
+    ])
+  }, [data, photos, placesPhotos, memories])
 
   // Counts as "she's seen it" once she's clicked past the love-quiz intro and
   // it's actually unlocked -- not on the bare page load (a link preview bot

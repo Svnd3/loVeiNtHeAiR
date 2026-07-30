@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import LoveQuiz from './LoveQuiz'
 import KnowMeQuiz from './KnowMeQuiz'
@@ -8,6 +8,7 @@ import LoveLoader from '../../components/LoveLoader'
 import { useProfile } from './useProfile'
 import { generateAutoQuestions } from './knowMeQuiz'
 import { useAuth } from '../../lib/AuthContext'
+import { preloadImages } from '../../lib/preloadImages'
 import './Surprise.css'
 
 // A couple of examples of the "ask her your own question" gate (Super+) so
@@ -36,6 +37,21 @@ function Surprise() {
       gift: profile.gift,
       song: profile.song ?? null,
     })
+  }, [profile])
+
+  // Starts pulling every photo the preview will eventually show into the
+  // browser cache the instant it's known -- before she's even answered the
+  // love quiz -- so CurveGallery/MemoryCard/ScratchReveal further down just
+  // show an already-cached image instead of visibly loading one.
+  useEffect(() => {
+    if (!profile) return
+    preloadImages([
+      ...profile.photos,
+      ...profile.placesPhotos,
+      ...profile.memories.map((m) => m.photo),
+      profile.gift.photo,
+      profile.gift.attachment,
+    ])
   }, [profile])
 
   if (!profile) {
