@@ -16,7 +16,7 @@ function Home() {
             alt=""
             aria-hidden="true"
           />
-          <p className="home__surprise-hint">Don't be a boring one, show her you care.</p>
+          <p className="home__surprise-hint">Click me</p>
           <span className="home__preview-link">Click me for a preview</span>
         </Link>
       </div>

@@ -119,6 +119,28 @@
   font-size: clamp(20px, 5vw, 26px);
   font-weight: 500;
   text-align: center;
+  animation: home-hint-shake 2.4s ease-in-out infinite;
+}
+
+@keyframes home-hint-shake {
+  0%, 60% {
+    transform: translateX(0) rotate(0deg);
+  }
+  64% {
+    transform: translateX(-4px) rotate(-4deg);
+  }
+  70% {
+    transform: translateX(4px) rotate(4deg);
+  }
+  76% {
+    transform: translateX(-3px) rotate(-3deg);
+  }
+  82% {
+    transform: translateX(3px) rotate(3deg);
+  }
+  88%, 100% {
+    transform: translateX(0) rotate(0deg);
+  }
 }
 
 @media (max-width: 480px) {
