@@ -13,7 +13,6 @@ import {
 } from '../features/surprise/knowMeQuiz'
 import TierPaywall from '../components/TierPaywall'
 import LoveLoader from '../components/LoveLoader'
-import { computePricing } from '../lib/payments'
 import { sendSurpriseCreatedEmail } from '../lib/notifications'
 import './Details.css'
 
@@ -1706,13 +1705,11 @@ function Details() {
   }
 
   if (showPaywall && surpriseId && session) {
-    const pricing = computePricing()
     return (
       <TierPaywall
         surpriseId={surpriseId}
         userEmail={session.user.email ?? ''}
         accessToken={session.access_token}
-        pricing={pricing}
         onSuccess={() => {
           // Only now — payment actually confirmed — does he get the "her link
           // is ready" email. Sending it any earlier (e.g. right after the

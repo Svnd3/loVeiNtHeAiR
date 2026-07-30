@@ -4,7 +4,6 @@ import {
   FREE_ACCESS_EMAILS,
   generatePaymentReference,
   verifySurprisePayment,
-  type PricingResult,
   type Tier,
 } from '../lib/payments'
 import './TierPaywall.css'
@@ -30,8 +29,6 @@ declare global {
   }
 }
 
-const TIER = TIERS[0]
-
 // Mounted by the parent only while the paywall should be visible — that way
 // each appearance starts from fresh state instead of needing an effect to
 // reset it on reopen (same pattern as shareitt's TierPaywall).
@@ -45,22 +42,23 @@ export default function TierPaywall({
   surpriseId: string
   userEmail: string
   accessToken: string
-  // Unused now that there's a single flat price -- kept so callers (Details.tsx,
-  // Account.tsx) don't need to change what they pass in.
-  pricing?: PricingResult
   onSuccess: (tier: Tier) => void
   onClose?: () => void
 }) {
+  // Defaults to the full-price/full-photos option -- Lite is an explicit
+  // opt-down, not the default.
+  const [selectedTier, setSelectedTier] = useState<Tier>('premium')
   const [stage, setStage] = useState<'idle' | 'paying' | 'confirming' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const confirmingRef = useRef(false)
 
+  const tier = TIERS.find((t) => t.id === selectedTier) ?? TIERS[0]
   const isFreeAccess = FREE_ACCESS_EMAILS.includes(userEmail.toLowerCase())
 
   const confirmPayment = (reference: string) => {
     confirmingRef.current = true
     setStage('confirming')
-    verifySurprisePayment({ reference, tier: TIER.id, surpriseId, accessToken })
+    verifySurprisePayment({ reference, tier: tier.id, surpriseId, accessToken })
       .then((payment) => {
         confirmingRef.current = false
         setStage('idle')
@@ -80,9 +78,10 @@ export default function TierPaywall({
 
     // Founder/testing accounts (see FREE_ACCESS_EMAILS) skip Paystack
     // entirely -- verify-surprise-payment recognizes the same address
-    // server-side and grants access without ever checking a reference.
+    // server-side and grants full (Premium) access regardless of which
+    // option was selected, without ever checking a reference.
     if (isFreeAccess) {
-      confirmPayment(generatePaymentReference(TIER.id))
+      confirmPayment(generatePaymentReference(tier.id))
       return
     }
 
@@ -92,13 +91,13 @@ export default function TierPaywall({
       return
     }
 
-    const reference = generatePaymentReference(TIER.id)
+    const reference = generatePaymentReference(tier.id)
     const paystackPop = new window.PaystackPop()
 
     paystackPop.checkout({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: userEmail || 'creator@loveintheair.app',
-      amount: TIER.amount * 100,
+      amount: tier.amount * 100,
       currency: 'KES',
       // Apple Pay only shows up on Apple devices/Safari; everyone else still
       // sees the normal checkout with these channels.
@@ -139,18 +138,30 @@ export default function TierPaywall({
           )}
         </div>
 
-        <div className="tier-paywall__single">
-          <div className="tier-paywall__tier-head">
-            <span className="tier-paywall__tier-name">{TIER.tagline}</span>
-            <span className="tier-paywall__tier-amount">
-              {isFreeAccess ? 'Free for you' : `KSh ${TIER.amount}`}
-            </span>
-          </div>
-          <ul className="tier-paywall__tier-features">
-            {TIER.features.map((feature) => (
-              <li key={feature}>{feature}</li>
-            ))}
-          </ul>
+        <div className="tier-paywall__options">
+          {TIERS.map((option) => (
+            <button
+              type="button"
+              key={option.id}
+              className={`tier-paywall__option ${
+                selectedTier === option.id ? 'tier-paywall__option--active' : ''
+              }`}
+              onClick={() => setSelectedTier(option.id)}
+            >
+              <div className="tier-paywall__tier-head">
+                <span className="tier-paywall__tier-name">{option.name}</span>
+                <span className="tier-paywall__tier-amount">
+                  {isFreeAccess ? 'Free for you' : `KSh ${option.amount}`}
+                </span>
+              </div>
+              <p className="tier-paywall__tier-tagline">{option.tagline}</p>
+              <ul className="tier-paywall__tier-features">
+                {option.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            </button>
+          ))}
         </div>
 
         <button
@@ -165,7 +176,7 @@ export default function TierPaywall({
               : 'Confirming payment…'
             : isFreeAccess
               ? 'Continue — it\'s free for you'
-              : `Pay KSh ${TIER.amount}`}
+              : `Pay KSh ${tier.amount}`}
         </button>
 
         {errorMessage && <p className="tier-paywall__error">{errorMessage}</p>}

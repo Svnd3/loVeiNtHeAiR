@@ -121,24 +121,22 @@ create table if not exists surprise_payments (
   id uuid primary key default gen_random_uuid(),
   surprise_id uuid not null references surprises(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  tier text not null check (tier in ('basic', 'super', 'mixed', 'premium', 'custom')),
+  tier text not null check (tier in ('basic', 'super', 'mixed', 'premium', 'custom', 'lite')),
   amount integer not null,
   paystack_reference text not null unique,
   created_at timestamptz not null default now()
 );
 
 -- Widens the check constraint when this script is re-run against a table
--- created before 'mixed'/'custom' existed -- 'mixed' is the auto-detected
--- 620 tier for content that needs Premium only because it combines a
--- Super-only extra with a Premium-only one (see computePricing in
--- src/lib/payments.ts); 'custom' is the always-offered 4999 bespoke tier
--- (fully custom-built, everything Premium has plus direct back-and-forth --
--- not something computePricing ever auto-selects, only ever chosen
--- voluntarily in TierPaywall). No-op on a fresh install (the create table
--- above already allows both).
+-- created before 'mixed'/'custom'/'lite' existed -- 'basic'/'super'/'mixed'/
+-- 'custom' are historical tiers no longer sold (kept only so old rows still
+-- render what they actually paid for); 'lite' (KSh 199, capped photo count)
+-- and 'premium' (KSh 299, no photo cap) are the two tiers actually on sale
+-- now -- see TIERS in src/lib/payments.ts. No-op on a fresh install (the
+-- create table above already allows all of these).
 alter table surprise_payments drop constraint if exists surprise_payments_tier_check;
 alter table surprise_payments add constraint surprise_payments_tier_check
-  check (tier in ('basic', 'super', 'mixed', 'premium', 'custom'));
+  check (tier in ('basic', 'super', 'mixed', 'premium', 'custom', 'lite'));
 
 alter table surprise_payments enable row level security;
 
@@ -258,7 +256,7 @@ as $$
   from surprises s
   join surprise_payments sp on sp.surprise_id = s.id
   where s.id = p_surprise_id
-  order by case sp.tier when 'custom' then 5 when 'premium' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
+  order by case sp.tier when 'custom' then 5 when 'premium' then 4 when 'lite' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
   limit 1;
 $$;
 
@@ -373,7 +371,7 @@ as $$
   from surprises s
   join surprise_payments sp on sp.surprise_id = s.id
   where s.is_preview_template
-  order by case sp.tier when 'custom' then 5 when 'premium' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
+  order by case sp.tier when 'custom' then 5 when 'premium' then 4 when 'lite' then 4 when 'mixed' then 3 when 'super' then 2 else 1 end desc
   limit 1;
 $$;
 

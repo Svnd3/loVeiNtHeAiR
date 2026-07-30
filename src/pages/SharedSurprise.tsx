@@ -11,7 +11,7 @@ import { isSongAllowedForTier, type SongChoice } from '../features/surprise/song
 import type { SurpriseGift, SurpriseMemory } from '../features/surprise/useProfile'
 import KnowMeQuiz from '../features/surprise/KnowMeQuiz'
 import { generateAutoQuestions, type KnowMeMode, type KnowMeQuestion } from '../features/surprise/knowMeQuiz'
-import { TIER_RANK, type Tier } from '../lib/payments'
+import { LITE_PHOTO_LIMIT, TIER_RANK, type Tier } from '../lib/payments'
 import { preloadImages } from '../lib/preloadImages'
 
 // Historical cap for the old 'mixed' tier (no longer sold -- see
@@ -69,6 +69,12 @@ function pickPhotoQuality(original: string, compressed: string | undefined, tier
   return tier === 'basic' ? compressed || original : original
 }
 
+// Lite (KSh 199) caps how many photos show per category -- everything else
+// about it is identical to Premium (see TIER_RANK in payments.ts).
+function capPhotos(photos: string[], tier: Tier): string[] {
+  return tier === 'lite' ? photos.slice(0, LITE_PHOTO_LIMIT) : photos
+}
+
 function formatCountdown(msRemaining: number) {
   if (msRemaining <= 0) return 'any moment now'
   const totalSeconds = Math.floor(msRemaining / 1000)
@@ -102,15 +108,20 @@ function SharedSurprise() {
   const [audioTime, setAudioTime] = useState({ currentTime: 0, duration: 0 })
   const viewRecordedRef = useRef(false)
   const herPhotos = useMemo(
-    () => (data ? pickQuality(data.her_photos, data.her_photos_compressed, data.tier) : []),
+    () =>
+      data ? capPhotos(pickQuality(data.her_photos, data.her_photos_compressed, data.tier), data.tier) : [],
     [data],
   )
   const himPhotos = useMemo(
-    () => (data ? pickQuality(data.him_photos, data.him_photos_compressed, data.tier) : []),
+    () =>
+      data ? capPhotos(pickQuality(data.him_photos, data.him_photos_compressed, data.tier), data.tier) : [],
     [data],
   )
   const placesPhotos = useMemo(
-    () => (data ? pickQuality(data.places_photos ?? [], data.places_photos_compressed, data.tier) : []),
+    () =>
+      data
+        ? capPhotos(pickQuality(data.places_photos ?? [], data.places_photos_compressed, data.tier), data.tier)
+        : [],
     [data],
   )
   const photos = useMemo(() => [...herPhotos, ...himPhotos], [herPhotos, himPhotos])

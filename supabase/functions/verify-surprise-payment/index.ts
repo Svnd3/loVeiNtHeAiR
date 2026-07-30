@@ -14,15 +14,16 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// One flat price, everything included -- no more per-feature tier gating.
-// "premium" is the only tier this function will ever grant for a real
-// payment now; it's kept as a string (rather than dropping the column) only
-// because older surprises already have basic/super/mixed/custom rows and
-// SharedSurprise.tsx / songs.ts still read those to render exactly what was
-// originally paid for. Kept in sync with PRICE in src/lib/payments.ts, which
-// only drives what the UI shows -- this copy is what actually enforces it.
-const PRICE = 299;
-const TIER = "premium";
+// Two tiers, same feature set -- "lite" just caps photo count client-side
+// (SharedSurprise.tsx), everything else is identical. "premium"/"lite" are
+// the only tiers this function will ever grant for a real payment now;
+// basic/super/mixed/custom are kept as valid strings (rather than dropping
+// the column) only because older surprises already have those rows and
+// SharedSurprise.tsx / songs.ts still read them to render exactly what was
+// originally paid for. Kept in sync with the TIERS map in
+// src/lib/payments.ts, which only drives what the UI shows -- this copy is
+// what actually enforces it.
+const TIERS: Record<string, number> = { lite: 199, premium: 299 };
 
 // Founder/testing accounts -- skip Paystack entirely and get full access for
 // free. Kept in sync with FREE_ACCESS_EMAILS in src/lib/payments.ts. Safe to
@@ -48,13 +49,16 @@ serve(async (req) => {
   }
 
   try {
-    const { reference, surpriseId } = await req.json();
+    const { reference, surpriseId, tier } = await req.json();
 
     if (!reference || typeof reference !== "string") {
       return jsonResponse({ error: "Missing payment reference." }, 400);
     }
     if (!surpriseId || typeof surpriseId !== "string") {
       return jsonResponse({ error: "Missing surprise id." }, 400);
+    }
+    if (typeof tier !== "string" || !(tier in TIERS)) {
+      return jsonResponse({ error: "Unknown tier." }, 400);
     }
 
     // Identify the caller from their own session token — never trust a
@@ -96,7 +100,12 @@ serve(async (req) => {
       return jsonResponse({ error: "Surprise not found." }, 404);
     }
 
-    let finalAmount = PRICE;
+    // Founder/testing accounts always get full (Premium) access for free,
+    // regardless of which option they had selected client-side.
+    const grantedTier = isFreeAccess ? "premium" : (tier as string);
+    const expectedAmount = TIERS[grantedTier];
+
+    let finalAmount = expectedAmount;
     let paystackReference = reference;
 
     if (isFreeAccess) {
@@ -128,12 +137,13 @@ serve(async (req) => {
       const paidSuccessfully =
         verifyBody?.status === true &&
         verifyBody?.data?.status === "success" &&
-        verifyBody?.data?.amount === PRICE * 100;
+        verifyBody?.data?.amount === expectedAmount * 100;
 
       if (!paidSuccessfully) {
         console.error("Paystack verify rejected", {
           reference,
-          expectedAmount: PRICE,
+          tier: grantedTier,
+          expectedAmount,
           paystackStatus: verifyBody?.status,
           transactionStatus: verifyBody?.data?.status,
           transactionAmount: verifyBody?.data?.amount,
@@ -152,7 +162,7 @@ serve(async (req) => {
       .insert({
         surprise_id: surpriseId,
         user_id: user.id,
-        tier: TIER,
+        tier: grantedTier,
         amount: finalAmount,
         paystack_reference: paystackReference,
       })

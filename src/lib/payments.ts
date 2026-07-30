@@ -1,11 +1,12 @@
 import { supabaseUrl, supabaseAnonKey } from './supabaseClient'
 
-// Historical values only -- every surprise now costs the same flat PRICE
-// (see below), but older rows in surprise_payments still have whichever of
-// these they actually paid for, and SharedSurprise.tsx / songs.ts still
-// honor those grandfathered-in tiers via TIER_RANK rather than stripping
-// content someone already paid for.
-export type Tier = 'basic' | 'super' | 'mixed' | 'premium' | 'custom'
+// 'basic' / 'super' / 'mixed' / 'custom' are historical values only -- older
+// rows in surprise_payments still have whichever of these they actually
+// paid for, and SharedSurprise.tsx / songs.ts still honor those
+// grandfathered-in tiers via TIER_RANK rather than stripping content
+// someone already paid for. 'lite' and 'premium' are the two tiers actually
+// on sale now (see TIERS below).
+export type Tier = 'basic' | 'super' | 'mixed' | 'premium' | 'custom' | 'lite'
 
 // Accounts that skip Paystack entirely and always get full access for free
 // (see TierPaywall.tsx) -- founder/testing accounts only. Visible in the
@@ -29,19 +30,41 @@ export type TierConfig = {
   features: string[]
 }
 
-// One flat price, everything included -- no more per-feature tier gating.
-// Kept in sync with TIERS in supabase/functions/verify-surprise-payment/index.ts,
-// which re-checks this amount server-side against what Paystack actually
-// confirms -- this copy only drives what the UI shows and what amount gets
-// sent to Paystack.
-export const PRICE = 299
+// Two tiers, same feature set -- Lite just caps how many photos he can add
+// per category (see LITE_PHOTO_LIMIT), everything else (song upload,
+// attachment, guess-the-gift, know-me quiz, custom questions) is identical
+// between them. Kept in sync with the TIERS map in
+// supabase/functions/verify-surprise-payment/index.ts, which re-checks
+// these amounts server-side against what Paystack actually confirms -- this
+// copy only drives what the UI shows and what amount gets sent to Paystack.
+export const LITE_PRICE = 199
+export const PREMIUM_PRICE = 299
+// Kept for any old callers that just want "the" full price.
+export const PRICE = PREMIUM_PRICE
+
+export const LITE_PHOTO_LIMIT = 8
 
 export const TIERS: TierConfig[] = [
   {
+    id: 'lite',
+    name: 'Basic',
+    amount: LITE_PRICE,
+    tagline: `Everything included, up to ${LITE_PHOTO_LIMIT} photos per category`,
+    features: [
+      'Her & your profiles, letter, memories and places',
+      `Up to ${LITE_PHOTO_LIMIT} photos each for her, you, and your places`,
+      'The scratch-card gift reveal',
+      'Every song in the library, or upload your own',
+      'Ask her as many of your own questions as you want',
+      '"How well do you know me?" mini-quiz',
+      'Attach the real ticket, reservation, or invite to the gift card',
+    ],
+  },
+  {
     id: 'premium',
     name: 'Send it',
-    amount: PRICE,
-    tagline: 'Everything included, no tiers to think about',
+    amount: PREMIUM_PRICE,
+    tagline: 'Everything included, no photo limit',
     features: [
       'Her & your profiles, photos, letter, memories and places',
       'The scratch-card gift reveal',
@@ -53,23 +76,23 @@ export const TIERS: TierConfig[] = [
   },
 ]
 
-export const TIER_RANK: Record<Tier, number> = { basic: 0, super: 1, mixed: 2, premium: 3, custom: 4 }
+// 'lite' ranks alongside 'premium' on purpose -- every existing
+// TIER_RANK[data.tier] >= TIER_RANK.premium check (attachment, guess-the-gift,
+// upload-your-own song) and `tier !== 'basic'` check (know-me quiz, custom
+// gate questions) should keep treating it as full access. The only thing
+// that actually looks for 'lite' specifically is the photo-count cap in
+// SharedSurprise.tsx.
+export const TIER_RANK: Record<Tier, number> = {
+  basic: 0,
+  super: 1,
+  mixed: 2,
+  premium: 3,
+  lite: 3,
+  custom: 4,
+}
 
 export function tierConfig(id: Tier): TierConfig {
   return TIERS.find((t) => t.id === id) ?? TIERS[0]
-}
-
-export type PricingResult = {
-  requiredTier: Tier
-  amount: number
-}
-
-// Every surprise costs the same flat PRICE now, regardless of what he filled
-// in -- TierPaywall just shows the one option. (Older surprises paid for
-// under the previous tiered system keep whatever they already bought; see
-// TIER_RANK usage in SharedSurprise.tsx / songs.ts.)
-export function computePricing(): PricingResult {
-  return { requiredTier: 'premium', amount: PRICE }
 }
 
 const VERIFY_PAYMENT_URL = `${supabaseUrl}/functions/v1/verify-surprise-payment`

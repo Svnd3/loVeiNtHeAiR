@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabaseClient'
 import { useSmartBack } from '../lib/useSmartBack'
 import TierPaywall from '../components/TierPaywall'
 import SurpriseCard, { type SurpriseCardData } from '../components/SurpriseCard'
-import { computePricing } from '../lib/payments'
 import { SUPER_ADMIN_EMAIL } from '../lib/admin'
 import './Account.css'
 
@@ -250,7 +249,6 @@ function Account() {
           surpriseId={payingSurpriseId}
           userEmail={session.user.email ?? ''}
           accessToken={session.access_token}
-          pricing={computePricing()}
           onSuccess={() => {
             setSurprises((prev) =>
               prev.map((s) => (s.id === payingSurpriseId ? { ...s, paid: true } : s)),
