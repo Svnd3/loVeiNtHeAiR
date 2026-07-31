@@ -57,17 +57,18 @@ type FetchedSurprise = {
 
 const POLL_INTERVAL_MS = 4000
 
-// Basic tier shows the smaller "compressed" sibling of each photo; Super/
-// Premium always get the full-quality original. Falls back to the original
-// per-item when a row was saved before the compressed column existed (or a
-// given upload has no compressed counterpart yet).
-function pickQuality(originals: string[], compressed: string[] | null, tier: Tier): string[] {
-  if (tier !== 'basic') return originals
+// Everyone gets the smaller "compressed" sibling of each photo now -- with
+// only one flat tier left (see payments.ts), there's no more "pay more for
+// full-res" distinction to justify shipping the heavier original by default,
+// and it's what was actually making pages feel slow to load. Falls back to
+// the original per-item when a row was saved before the compressed column
+// existed (or a given upload has no compressed counterpart yet).
+function pickQuality(originals: string[], compressed: string[] | null): string[] {
   return originals.map((url, i) => compressed?.[i] || url)
 }
 
-function pickPhotoQuality(original: string, compressed: string | undefined, tier: Tier): string {
-  return tier === 'basic' ? compressed || original : original
+function pickPhotoQuality(original: string, compressed: string | undefined): string {
+  return compressed || original
 }
 
 // Lite (KSh 199) caps how many photos show per category -- everything else
@@ -110,18 +111,18 @@ function SharedSurprise() {
   const viewRecordedRef = useRef(false)
   const herPhotos = useMemo(
     () =>
-      data ? capPhotos(pickQuality(data.her_photos, data.her_photos_compressed, data.tier), data.tier) : [],
+      data ? capPhotos(pickQuality(data.her_photos, data.her_photos_compressed), data.tier) : [],
     [data],
   )
   const himPhotos = useMemo(
     () =>
-      data ? capPhotos(pickQuality(data.him_photos, data.him_photos_compressed, data.tier), data.tier) : [],
+      data ? capPhotos(pickQuality(data.him_photos, data.him_photos_compressed), data.tier) : [],
     [data],
   )
   const placesPhotos = useMemo(
     () =>
       data
-        ? capPhotos(pickQuality(data.places_photos ?? [], data.places_photos_compressed, data.tier), data.tier)
+        ? capPhotos(pickQuality(data.places_photos ?? [], data.places_photos_compressed), data.tier)
         : [],
     [data],
   )
@@ -130,7 +131,7 @@ function SharedSurprise() {
     () =>
       (data?.memories ?? []).map((m) => ({
         prompt: m.prompt,
-        photo: m.photo ? pickPhotoQuality(m.photo, m.photo_compressed, data!.tier) : undefined,
+        photo: m.photo ? pickPhotoQuality(m.photo, m.photo_compressed) : undefined,
         caption: m.caption,
       })),
     [data],
@@ -163,7 +164,7 @@ function SharedSurprise() {
       ...photos,
       ...placesPhotos,
       ...memories.map((m) => m.photo),
-      pickPhotoQuality(data.gift.photo, data.gift.photo_compressed, data.tier),
+      pickPhotoQuality(data.gift.photo, data.gift.photo_compressed),
       TIER_RANK[data.tier] >= TIER_RANK.premium ? data.gift.attachment : undefined,
     ])
   }, [data, photos, placesPhotos, memories])
@@ -271,7 +272,7 @@ function SharedSurprise() {
   const isPremiumUp = TIER_RANK[data.tier] >= TIER_RANK.premium
   const giftForTier = {
     ...data.gift,
-    photo: pickPhotoQuality(data.gift.photo, data.gift.photo_compressed, data.tier),
+    photo: pickPhotoQuality(data.gift.photo, data.gift.photo_compressed),
     attachment: isPremiumUp ? data.gift.attachment : undefined,
     guess_question: isPremiumUp ? data.gift.guess_question : undefined,
     guess_options: isPremiumUp ? data.gift.guess_options : undefined,
