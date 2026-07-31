@@ -23,7 +23,7 @@ const CORS_HEADERS = {
 // originally paid for. Kept in sync with the TIERS map in
 // src/lib/payments.ts, which only drives what the UI shows -- this copy is
 // what actually enforces it.
-const TIERS: Record<string, number> = { lite: 199, premium: 299 };
+const TIERS: Record<string, number> = { lite: 199, premium: 249 };
 
 // Founder/testing accounts -- skip Paystack entirely and get full access for
 // free. Kept in sync with FREE_ACCESS_EMAILS in src/lib/payments.ts. Safe to

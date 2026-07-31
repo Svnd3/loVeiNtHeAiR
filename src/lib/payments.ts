@@ -38,7 +38,7 @@ export type TierConfig = {
 // these amounts server-side against what Paystack actually confirms -- this
 // copy only drives what the UI shows and what amount gets sent to Paystack.
 export const LITE_PRICE = 199
-export const PREMIUM_PRICE = 299
+export const PREMIUM_PRICE = 249
 // Kept for any old callers that just want "the" full price.
 export const PRICE = PREMIUM_PRICE
 

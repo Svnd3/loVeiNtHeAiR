@@ -131,7 +131,7 @@ create table if not exists surprise_payments (
 -- created before 'mixed'/'custom'/'lite' existed -- 'basic'/'super'/'mixed'/
 -- 'custom' are historical tiers no longer sold (kept only so old rows still
 -- render what they actually paid for); 'lite' (KSh 199, capped photo count)
--- and 'premium' (KSh 299, no photo cap) are the two tiers actually on sale
+-- and 'premium' (KSh 249, no photo cap) are the two tiers actually on sale
 -- now -- see TIERS in src/lib/payments.ts. No-op on a fresh install (the
 -- create table above already allows all of these).
 alter table surprise_payments drop constraint if exists surprise_payments_tier_check;

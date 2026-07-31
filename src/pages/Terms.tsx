@@ -105,7 +105,7 @@ function Terms() {
           <h3>7. Paid features &amp; billing</h3>
           <p>
             Building a page is free. Getting the link to send your Recipient requires a one-time
-            payment of KSh 299, which unlocks everything — your own uploaded song, the gift
+            payment of KSh 249, which unlocks everything — your own uploaded song, the gift
             attachment, unlimited questions, and every other feature the Service offers. Payments
             are processed by Paystack; we never see or store your card or mobile money details
             ourselves.
