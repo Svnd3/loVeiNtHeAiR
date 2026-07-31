@@ -14,6 +14,14 @@ import {
 import TierPaywall from '../components/TierPaywall'
 import LoveLoader from '../components/LoveLoader'
 import { sendSurpriseCreatedEmail } from '../lib/notifications'
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  isDraftWorthShowing,
+  timeAgo,
+  type DetailsDraft,
+} from '../lib/draftStorage'
 import './Details.css'
 
 // A photo is either one already uploaded (edit mode, loaded from the saved
@@ -1261,6 +1269,111 @@ function Details() {
   const [uploadError, setUploadError] = useState('')
   const [loadingExisting, setLoadingExisting] = useState(isEditing)
   const [loadError, setLoadError] = useState('')
+  // Set once a draft's been restored into the fields above, so the banner
+  // can show "restored from X ago" and the discard button knows there's
+  // something to clear. Only ever applies to a brand-new (non-editing)
+  // surprise -- an existing one is already real, saved data.
+  const [restoredDraft, setRestoredDraft] = useState<DetailsDraft | null>(null)
+
+  // Recovers whatever she'd typed last time she left mid-form, before this
+  // existed as a persisted row -- see draftStorage.ts. Runs once, only for a
+  // brand-new surprise (editing an existing one loads the real thing below).
+  useEffect(() => {
+    if (isEditing || !session?.user.id) return
+    const draft = loadDraft(session.user.id)
+    if (!draft || !isDraftWorthShowing(draft)) return
+
+    setHer((prev) => ({ ...prev, name: draft.her.name, nickname: draft.her.nickname, country: draft.her.country }))
+    setHim((prev) => ({ ...prev, name: draft.him.name, nickname: draft.him.nickname, country: draft.him.country }))
+    setLetter(draft.letter)
+    setQuestions(draft.questions)
+    setKnowMeMode(draft.knowMeMode)
+    setKnowMeQuiz(draft.knowMeQuiz)
+    setMemories(draft.memories.map((m) => ({ prompt: m.prompt, caption: m.caption, photo: null })))
+    setGift((prev) => ({
+      ...prev,
+      type: draft.gift.type,
+      title: draft.gift.title,
+      location: draft.gift.location,
+      when: draft.gift.when,
+      message: draft.gift.message,
+      guessQuestion: draft.gift.guessQuestion,
+      guessOptions: draft.gift.guessOptions,
+      guessCorrectIndex: draft.gift.guessCorrectIndex,
+    }))
+    if (draft.song?.type === 'library') setSong(draft.song)
+    setUnlockAt(draft.unlockAt)
+    setRestoredDraft(draft)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, session?.user.id])
+
+  // Autosaves every text field as she types -- debounced so it's not
+  // hitting localStorage on every keystroke. Skipped once a real row exists
+  // (editing, or a submit already went through) since the real thing
+  // supersedes it.
+  useEffect(() => {
+    if (isEditing || !session?.user.id || done || showPaywall) return
+    const userId = session.user.id
+    const timer = setTimeout(() => {
+      saveDraft(userId, {
+        her: { name: her.name, nickname: her.nickname, country: her.country, photoCount: her.photos.length },
+        him: { name: him.name, nickname: him.nickname, country: him.country, photoCount: him.photos.length },
+        letter,
+        questions,
+        knowMeMode,
+        knowMeQuiz,
+        memories: memories.map((m) => ({ prompt: m.prompt, caption: m.caption, hasPhoto: Boolean(m.photo) })),
+        placesCount: places.length,
+        gift: {
+          type: gift.type,
+          title: gift.title,
+          location: gift.location,
+          when: gift.when,
+          message: gift.message,
+          hasPhoto: Boolean(gift.photo),
+          hasAttachment: Boolean(gift.attachment),
+          guessQuestion: gift.guessQuestion,
+          guessOptions: gift.guessOptions,
+          guessCorrectIndex: gift.guessCorrectIndex,
+        },
+        song: song?.type === 'library' ? song : null,
+        unlockAt,
+      })
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [
+    isEditing,
+    session?.user.id,
+    done,
+    showPaywall,
+    her,
+    him,
+    letter,
+    questions,
+    knowMeMode,
+    knowMeQuiz,
+    memories,
+    places.length,
+    gift,
+    song,
+    unlockAt,
+  ])
+
+  const discardDraft = () => {
+    if (!session?.user.id) return
+    clearDraft(session.user.id)
+    setRestoredDraft(null)
+    setHer(emptyProfile)
+    setHim(emptyProfile)
+    setLetter('')
+    setQuestions([])
+    setKnowMeMode('auto')
+    setKnowMeQuiz([])
+    setMemories([])
+    setGift(emptyGift)
+    setSong(null)
+    setUnlockAt('')
+  }
 
   useEffect(() => {
     if (!editId || !session?.user.id) return
@@ -1669,6 +1782,8 @@ function Details() {
           memories: [],
         })
         if (insertError) throw insertError
+        // A real row now exists -- the draft (if any) is obsolete.
+        clearDraft(userId)
       }
 
       setSurpriseId(id)
@@ -1822,6 +1937,20 @@ function Details() {
             : 'Add her details and yours — country, name, and your best photos together.'}
         </p>
       </div>
+
+      {restoredDraft && (
+        <div className="details-draft-banner">
+          <p>
+            Picked up where you left off, from {timeAgo(restoredDraft.savedAt)}.
+            {(restoredDraft.her.photoCount > 0 || restoredDraft.him.photoCount > 0) && (
+              <> Photos couldn't be restored — please add them again.</>
+            )}
+          </p>
+          <button type="button" className="details-draft-banner__discard" onClick={discardDraft}>
+            Not this — start fresh
+          </button>
+        </div>
+      )}
 
       <div className="details-page__sections">
         <ProfileSection

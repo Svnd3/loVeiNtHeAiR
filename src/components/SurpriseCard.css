@@ -9,6 +9,11 @@
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.08);
 }
 
+.surprise-card--draft {
+  background: #fff8e8;
+  border: 1.5px dashed #d9b45c;
+}
+
 .surprise-card--admin {
   align-items: center;
   justify-content: center;

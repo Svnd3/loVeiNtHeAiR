@@ -270,6 +270,10 @@
   color: #6b8582;
 }
 
+.account-surprises__status--draft {
+  color: #8a6d1f;
+}
+
 .account-surprises__actions {
   display: flex;
   align-items: center;

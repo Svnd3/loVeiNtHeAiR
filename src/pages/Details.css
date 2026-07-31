@@ -28,6 +28,46 @@
   font-size: 0.95rem;
 }
 
+.details-draft-banner {
+  width: 100%;
+  max-width: 880px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1.5px solid #ffd68a;
+  background: #fff8e8;
+}
+
+.details-draft-banner p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b5420;
+  line-height: 1.5;
+}
+
+.details-draft-banner__discard {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid #d9b45c;
+  border-radius: 999px;
+  background: #fff;
+  color: #6b5420;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.details-draft-banner__discard:hover {
+  background: #fff1cf;
+}
+
 .details-page__sections {
   width: 100%;
   max-width: 880px;

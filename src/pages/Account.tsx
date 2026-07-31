@@ -6,6 +6,7 @@ import { useSmartBack } from '../lib/useSmartBack'
 import TierPaywall from '../components/TierPaywall'
 import SurpriseCard, { type SurpriseCardData } from '../components/SurpriseCard'
 import { SUPER_ADMIN_EMAIL } from '../lib/admin'
+import { loadDraft, clearDraft, isDraftWorthShowing, timeAgo, type DetailsDraft } from '../lib/draftStorage'
 import './Account.css'
 
 type SurpriseSummary = SurpriseCardData & {
@@ -41,8 +42,24 @@ function Account() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [listError, setListError] = useState('')
   const [payingSurpriseId, setPayingSurpriseId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<DetailsDraft | null>(null)
 
   const userId = session?.user.id
+
+  // Picks up an unfinished surprise left in this browser's localStorage --
+  // see draftStorage.ts. She never got far enough for a real row to exist,
+  // so this is the only trace of it.
+  useEffect(() => {
+    if (!userId) return
+    const found = loadDraft(userId)
+    setDraft(found && isDraftWorthShowing(found) ? found : null)
+  }, [userId])
+
+  const discardDraft = () => {
+    if (!userId) return
+    clearDraft(userId)
+    setDraft(null)
+  }
 
   useEffect(() => {
     if (!userId) return
@@ -202,6 +219,40 @@ function Account() {
           {listError && <p className="account-surprises__error">{listError}</p>}
 
           <div className="account-surprises__grid">
+            {draft && (
+              <div className="surprise-card surprise-card--draft">
+                <button
+                  type="button"
+                  className="surprise-card__delete"
+                  onClick={discardDraft}
+                  aria-label="Discard draft"
+                >
+                  ×
+                </button>
+                <div className="surprise-card__head">
+                  <span className="surprise-card__name">
+                    {draft.him.name || draft.her.name || 'Unfinished surprise'}
+                  </span>
+                </div>
+                <p className="surprise-card__meta">
+                  {draft.her.name ? `for ${draft.her.name}` : "you hadn't gotten to her name yet"}
+                </p>
+                <div className="surprise-card__status">
+                  <span className="account-surprises__status account-surprises__status--draft">
+                    Draft · saved {timeAgo(draft.savedAt)}
+                  </span>
+                </div>
+                <div className="surprise-card__actions">
+                  <button
+                    type="button"
+                    className="surprise-card__btn"
+                    onClick={() => navigate('/details')}
+                  >
+                    Finish up
+                  </button>
+                </div>
+              </div>
+            )}
             {surprises.map((surprise, index) =>
               confirmingId === surprise.id ? (
                 <div key={surprise.id} className="account-surprises__confirm">
