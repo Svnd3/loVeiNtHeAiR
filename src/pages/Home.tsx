@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
+import ReportButton from '../components/ReportButton'
 import './Home.css'
 
 function Home() {
   return (
     <main className="home">
+      <ReportButton />
+
       <Link to="/login" className="home__login-link">
         Sign Up
       </Link>

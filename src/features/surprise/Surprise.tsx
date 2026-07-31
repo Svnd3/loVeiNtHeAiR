@@ -5,6 +5,7 @@ import KnowMeQuiz from './KnowMeQuiz'
 import AudioPlayer from './AudioPlayer'
 import ScrollStory from './ScrollStory'
 import LoveLoader from '../../components/LoveLoader'
+import ReportButton from '../../components/ReportButton'
 import { useProfile } from './useProfile'
 import { generateAutoQuestions } from './knowMeQuiz'
 import { useAuth } from '../../lib/AuthContext'
@@ -67,6 +68,8 @@ function Surprise() {
 
   return (
     <div className="surprise">
+      <ReportButton />
+
       {/* Mounted immediately (not gated on `believed`) so the song is already
           buffering in the background by the time she reaches the reveal --
           `active` is what actually controls whether it plays/shows its widget. */}

@@ -44,6 +44,14 @@ export const PRICE = PREMIUM_PRICE
 
 export const LITE_PHOTO_LIMIT = 8
 
+// Lite isn't publicly offered right now -- only these exact addresses ever
+// see it as an option in TierPaywall; everyone else only sees Premium.
+// Kept in sync with LITE_TIER_EMAILS in
+// supabase/functions/verify-surprise-payment/index.ts, which is what
+// actually enforces this (a request for "lite" from anyone else is
+// rejected there regardless of what the client shows).
+export const LITE_TIER_EMAILS = ['jenipherkar4nja@gmail.com']
+
 export const TIERS: TierConfig[] = [
   {
     id: 'lite',

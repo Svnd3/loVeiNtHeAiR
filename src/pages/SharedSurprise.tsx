@@ -7,6 +7,7 @@ import LyricsBackdrop from '../features/surprise/LyricsBackdrop'
 import ScrollStory from '../features/surprise/ScrollStory'
 import SenderChip from '../features/surprise/SenderChip'
 import LoveLoader from '../components/LoveLoader'
+import ReportButton from '../components/ReportButton'
 import { isSongAllowedForTier, type SongChoice } from '../features/surprise/songs'
 import type { SurpriseGift, SurpriseMemory } from '../features/surprise/useProfile'
 import KnowMeQuiz from '../features/surprise/KnowMeQuiz'
@@ -286,6 +287,7 @@ function SharedSurprise() {
   return (
     <div className="surprise">
       <SenderChip name={himName} />
+      <ReportButton surpriseId={id} />
 
       {/* Mounted as soon as the song is known (not gated on `believed`) so the
           file is already buffering in the background — `active` is what

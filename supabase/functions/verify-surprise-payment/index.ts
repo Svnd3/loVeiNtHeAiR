@@ -36,6 +36,12 @@ const FREE_ACCESS_EMAILS = [
   "jt@internal.loveintheair.app",
 ];
 
+// Lite (KSh 199) isn't publicly offered -- TierPaywall only shows it as an
+// option to these exact addresses, but that's just UI; this is what actually
+// stops anyone else from requesting it directly. Kept in sync with
+// LITE_TIER_EMAILS in src/lib/payments.ts.
+const LITE_TIER_EMAILS = ["jenipherkar4nja@gmail.com"];
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -80,6 +86,14 @@ serve(async (req) => {
     }
 
     const isFreeAccess = Boolean(user.email && FREE_ACCESS_EMAILS.includes(user.email.toLowerCase()));
+
+    if (
+      tier === "lite" &&
+      !isFreeAccess &&
+      !(user.email && LITE_TIER_EMAILS.includes(user.email.toLowerCase()))
+    ) {
+      return jsonResponse({ error: "That tier isn't available on this account." }, 403);
+    }
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL") as string,

@@ -68,6 +68,10 @@
   margin-top: 22px;
 }
 
+.tier-paywall__options--single {
+  grid-template-columns: 1fr;
+}
+
 .tier-paywall__option {
   text-align: left;
   border: 1.5px solid #cfe3e1;

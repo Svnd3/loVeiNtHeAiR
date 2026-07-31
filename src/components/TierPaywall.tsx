@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import {
   TIERS,
   FREE_ACCESS_EMAILS,
+  LITE_TIER_EMAILS,
   generatePaymentReference,
   verifySurprisePayment,
   type Tier,
@@ -52,7 +53,13 @@ export default function TierPaywall({
   const [errorMessage, setErrorMessage] = useState('')
   const confirmingRef = useRef(false)
 
-  const tier = TIERS.find((t) => t.id === selectedTier) ?? TIERS[0]
+  // Lite isn't publicly offered -- only shows up as an option for the exact
+  // addresses in LITE_TIER_EMAILS (see payments.ts); everyone else only
+  // ever sees the Premium card.
+  const canSeeLite = LITE_TIER_EMAILS.includes(userEmail.toLowerCase())
+  const visibleTiers = canSeeLite ? TIERS : TIERS.filter((t) => t.id !== 'lite')
+
+  const tier = visibleTiers.find((t) => t.id === selectedTier) ?? visibleTiers[0]
   const isFreeAccess = FREE_ACCESS_EMAILS.includes(userEmail.toLowerCase())
 
   const confirmPayment = (reference: string) => {
@@ -138,8 +145,12 @@ export default function TierPaywall({
           )}
         </div>
 
-        <div className="tier-paywall__options">
-          {TIERS.map((option) => (
+        <div
+          className={`tier-paywall__options ${
+            visibleTiers.length === 1 ? 'tier-paywall__options--single' : ''
+          }`}
+        >
+          {visibleTiers.map((option) => (
             <button
               type="button"
               key={option.id}
