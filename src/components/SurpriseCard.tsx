@@ -103,6 +103,11 @@ function SurpriseCard({
         style={{ background: color }}
         onClick={() => setExpanded(true)}
       >
+        <span
+          className={`surprise-card__payment surprise-card__payment--${surprise.paid ? 'paid' : 'unpaid'}`}
+        >
+          {surprise.paid ? 'Paid' : 'Not paid'}
+        </span>
         {pfp && <img className="surprise-card__pfp" src={pfp} alt="" />}
         <span className="surprise-card__name">{name}</span>
       </button>
@@ -141,6 +146,12 @@ function SurpriseCard({
               </p>
             )}
             <p className="surprise-card-expanded__row">Surprise for {herDisplayName}</p>
+            <p
+              className={`surprise-card-expanded__payment surprise-card-expanded__payment--${surprise.paid ? 'paid' : 'unpaid'}`}
+            >
+              <span aria-hidden="true" />
+              {surprise.paid ? 'Payment received' : 'Not paid'}
+            </p>
 
             <a
               className="surprise-card-expanded__view"

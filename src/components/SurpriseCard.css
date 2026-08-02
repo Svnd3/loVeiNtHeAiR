@@ -33,6 +33,27 @@
   transform: scale(0.98);
 }
 
+.surprise-card__payment {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.surprise-card__payment--paid {
+  background: #dff5e5;
+  color: #20683a;
+}
+
+.surprise-card__payment--unpaid {
+  background: #fff0e1;
+  color: #9a4b19;
+}
+
 .surprise-card__head {
   display: flex;
   align-items: center;
@@ -194,6 +215,34 @@
   font-size: 0.9rem;
   color: #4a4350;
   margin: 0;
+}
+
+.surprise-card-expanded__payment {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 0;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.surprise-card-expanded__payment span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.surprise-card-expanded__payment--paid {
+  background: #dff5e5;
+  color: #20683a;
+}
+
+.surprise-card-expanded__payment--unpaid {
+  background: #fff0e1;
+  color: #9a4b19;
 }
 
 .surprise-card-expanded__view {
